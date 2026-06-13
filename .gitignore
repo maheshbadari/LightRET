@@ -17,6 +17,10 @@ weights/
 *.pth
 *.ckpt
 
+# Local dataset cache
+conll2003_local/
+conll2003_local.zip
+
 # Datasets / HuggingFace cache
 ~/.cache/
 .cache/

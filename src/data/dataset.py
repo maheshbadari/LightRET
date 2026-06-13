@@ -27,17 +27,28 @@ from typing import Any
 
 def _load_conll2003(split: str):
     """
-    Load CoNLL-2003 by reading parquet files directly from HuggingFace Hub.
+    Load CoNLL-2003 from local disk first, then fall back to HuggingFace Hub.
 
-    datasets >= 3.0 refuses to run dataset scripts (conll2003.py), even for
-    third-party mirrors. Loading via the built-in 'parquet' loader bypasses
-    the script-detection path entirely.
+    datasets >= 3.0 refuses to run dataset scripts (conll2003.py).
+    Preferred path: load from pre-saved Arrow dataset uploaded as a Kaggle dataset.
+    Fallback: load parquet files directly via hf:// URI (bypasses script detection).
 
-    Falls back through three strategies so this works in any environment.
+    On Kaggle: add conll2003_local as a dataset input, it mounts at
+    /kaggle/input/conll2003-local/conll2003_local/
     """
-    from datasets import load_dataset
+    import pathlib
+    from datasets import load_from_disk, load_dataset
 
-    # Strategy 1: direct parquet via hf:// URI (works on datasets >= 2.x, no script)
+    # Strategy 1: local pre-saved dataset (Kaggle dataset input)
+    local_candidates = [
+        pathlib.Path("/kaggle/input/conll2003-local/conll2003_local"),
+        pathlib.Path("conll2003_local"),  # local dev
+    ]
+    for local_path in local_candidates:
+        if (local_path / split).exists():
+            return load_from_disk(str(local_path / split))
+
+    # Strategy 2: direct parquet via hf:// URI (no script involved)
     base = "hf://datasets/conll2003/data"
     try:
         return load_dataset(
@@ -48,7 +59,7 @@ def _load_conll2003(split: str):
     except Exception:
         pass
 
-    # Strategy 2: dynamically discover parquet files in the repo
+    # Strategy 3: dynamically discover parquet files in the repo
     try:
         from huggingface_hub import list_repo_files
         files = [
@@ -61,7 +72,7 @@ def _load_conll2003(split: str):
     except Exception:
         pass
 
-    # Strategy 3: last resort — named dataset (works on older datasets versions)
+    # Strategy 4: last resort (older datasets versions)
     return load_dataset("conll2003", split=split, trust_remote_code=True)
 
 import torch
