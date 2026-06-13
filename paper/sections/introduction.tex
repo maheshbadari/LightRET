@@ -1,0 +1,83 @@
+% ============================================================
+%  1. Introduction
+% ============================================================
+\section{Introduction}
+\label{sec:intro}
+
+Modern NER pipelines overwhelmingly rely on contextual language models such
+as BERT~\citep{devlin2019bert}, RoBERTa~\citep{liu2019roberta}, or
+DeBERTa~\citep{he2021deberta}.  These models preprocess text through fixed
+subword vocabularies---WordPiece or Byte-Pair Encoding (BPE)---and their
+performance is conditioned on the assumption that input tokens appear in a
+form close to those seen during pretraining.
+
+This assumption routinely fails in practice for several reasons:
+
+\begin{itemize}
+  \item \textbf{User-generated content} (social media, support tickets, search
+        queries) contains frequent spelling errors.
+  \item \textbf{OCR pipelines} introduce substitution, insertion, and deletion
+        noise at the character level.
+  \item \textbf{Multilingual and code-switched} text produces tokens that fall
+        outside any fixed vocabulary.
+  \item \textbf{Adversarial inputs} exploit tokenizer blindspots to evade entity
+        detection systems.
+\end{itemize}
+
+As a concrete example, when BERT encounters the query \emph{``Micorsoft
+anounced a partership with Opnai''}, its WordPiece tokenizer fragments the
+misspelled tokens into meaningless subword pieces, degrading NER recall for
+the very entities that matter most downstream.
+
+Three families of approaches attempt to address this fragility:
+(i)~\emph{character-level models}~\citep{lample2016neural,ma2016end} that
+lack contextual pretraining and are computationally expensive at inference;
+(ii)~\emph{robustness augmentation}~\citep{pruthi2019combating} that
+fine-tunes pretrained models on noisy text but remains bottlenecked by the
+subword tokenizer at its input; and
+(iii)~\emph{hybrid tokenization}~\citep{xue2022byt5,clark2022canine} that
+partially decouples character and word representations, adding architectural
+complexity.
+
+We take a different path.  Our key observation is:
+
+\begin{quote}
+\emph{Character-level embeddings can serve as a universal, vocabulary-free
+word representation if distilled carefully from a high-quality subword-based
+teacher.}
+\end{quote}
+
+We propose \LightRet{}, which combines three components:
+
+\begin{enumerate}
+  \item \textbf{\RetVec{}}~\citep{sander2023retvec}: a compact, pretrained
+        character-level embedder that maps any Unicode word to a
+        $256$-dimensional vector without a vocabulary lookup, and whose
+        representation space is explicitly regularised so that typographically
+        similar words are close.
+  \item A \textbf{three-stage progressive distillation pipeline} that transfers
+        BERT's contextual knowledge into a lightweight
+        BiGRU--Transformer backbone via an intermediate \RetBERT{} student.
+  \item A \textbf{noisy-student NER fine-tuning} stage with a stochastic
+        character-noise simulator and a novel \emph{dynamic BIO label projection}
+        algorithm that handles word-splitting noise without loss of label
+        integrity.
+\end{enumerate}
+
+\paragraph{Contributions.}
+\begin{enumerate}
+  \item A principled three-stage teacher--student distillation chain
+        $\textsc{BERT} \!\to\! \RetBERT{} \!\to\! \LightRet{}$, where the final
+        student uses a fundamentally different input representation
+        (character-level \RetVec{}) than the teacher (subword-based BERT).
+  \item A noisy-student NER training procedure featuring a character-level
+        noise simulator and a dynamic BIO label projection algorithm that
+        correctly handles merge and split events caused by space-insertion
+        noise.
+  \item A compact (${\sim}4$M parameter), vocabulary-free NER model
+        deployable on CPU endpoints, achieving competitive clean-text F1 and
+        superior noise robustness compared to BERT-base and CharBERT baselines.
+  \item Comprehensive ablation studies isolating the contribution of each
+        distillation stage, the noise augmentation, and the distillation loss
+        component.
+\end{enumerate}

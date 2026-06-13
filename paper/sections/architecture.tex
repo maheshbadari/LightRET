@@ -1,0 +1,192 @@
+% ============================================================
+%  5. Architecture Details
+% ============================================================
+\section{Architecture}
+\label{sec:arch}
+
+\subsection{RetVec Embedder}
+
+\RetVec{}~\citep{sander2023retvec} maps any Unicode word $w$ to a
+$256$-dimensional vector through a three-layer feed-forward network:
+\begin{equation}
+  \RetVec(w)
+  \;=\;
+  \tanh\!\bigl(
+    \bW_3\,\text{GELU}(
+      \bW_2\,\text{GELU}(
+        \bW_1\,\phi(w) + \bb_1
+      ) + \bb_2
+    ) + \bb_3
+  \bigr),
+  \label{eq:retvec}
+\end{equation}
+where $\phi(w) \in \RR^{d_{\text{in}}}$ is a fixed character-hash projection.
+All weights $\{\bW_1, \bW_2, \bW_3, \bb_1, \bb_2, \bb_3\}$ are pretrained
+and \textbf{frozen throughout all three stages}.
+The output lies in $[-1, 1]^{256}$ (bounded by $\tanh$).
+
+\subsection{Pre-LayerNorm Transformer Block}
+
+All Transformer layers in both \RetBERT{} and \LightRet{} use the
+pre-LayerNorm variant~\citep{xiong2020layer}, which we found more training-stable
+during distillation than post-LayerNorm:
+\begin{align}
+  \bx' &= \bx + \text{MHA}\!\left(\text{LN}(\bx)\right),
+  \label{eq:pre_ln_attn}\\
+  \bx'' &= \bx' + \text{FFN}\!\left(\text{LN}(\bx')\right),
+  \label{eq:pre_ln_ffn}
+\end{align}
+where $\text{MHA}$ denotes multi-head self-attention and
+$\text{FFN}(\bv) = \bW_2\,\text{GELU}(\bW_1\bv + \bb_1) + \bb_2$.
+
+Multi-head attention with $H$ heads and head dimension $d_k = d / H$:
+\begin{equation}
+  \text{MHA}(\bQ,\bK,\bV)
+  \;=\;
+  \text{Concat}\!\left(\text{head}_1,\ldots,\text{head}_H\right)\bW^O,
+  \label{eq:mha}
+\end{equation}
+\begin{equation}
+  \text{head}_h
+  \;=\;
+  \text{Attention}\!\left(\bQ\bW^Q_h,\;\bK\bW^K_h,\;\bV\bW^V_h\right)
+  \;=\;
+  \text{softmax}\!\!\left(\frac{\bQ\bW^Q_h\,(\bK\bW^K_h)^\top}{\sqrt{d_k}}\right)
+  \bV\bW^V_h.
+  \label{eq:attention}
+\end{equation}
+
+\subsection{Model Comparison}
+
+Table~\ref{tab:arch} summarises the architectural parameters of
+\LightRet{} against its distillation teachers and baselines.
+
+\begin{table}[h]
+\centering
+\caption{Architecture comparison. \textbf{Vocab} = requires tokenizer vocabulary.}
+\label{tab:arch}
+\resizebox{\columnwidth}{!}{%
+\begin{tabular}{lrrrrll}
+\toprule
+\textbf{Model} & \textbf{Params} & \textbf{Layers} & \textbf{$d$} & \textbf{$H$} & \textbf{Vocab} & \textbf{Input} \\
+\midrule
+BiLSTM-CRF       & $\sim$8M   & --  & 256 & --  & Yes & Char+Word  \\
+DistilBERT        & 66M        & 6   & 768 & 12  & Yes & Subword    \\
+BERT-base         & 110M       & 12  & 768 & 12  & Yes & Subword    \\
+CharBERT          & 114M       & 12  & 768 & 12  & Yes & Subword+Char\\
+\midrule
+\RetBERT{}        & $\sim$86M  & 12  & 768 & 12  & \textbf{No} & \RetVec{} \\
+\LightRet{} (ours)& $\sim$4M   & 4   & 256 & 4   & \textbf{No} & \RetVec{} \\
+\bottomrule
+\end{tabular}
+}
+\end{table}
+
+\subsection{Three-Stage Architecture Diagram}
+
+Figure~\ref{fig:pipeline} illustrates the full training pipeline.
+
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}[
+  every node/.style={font=\small},
+  box/.style={
+    draw, rounded corners=4pt, minimum width=2.0cm,
+    minimum height=0.6cm, align=center, fill=white, thick
+  },
+  frozen/.style={box, fill=blue!10},
+  train/.style={box,  fill=orange!15},
+  loss/.style={box,  fill=green!12, dashed, minimum width=1.5cm},
+  arr/.style={-{Latex[length=5pt]}, thick},
+  darr/.style={-{Latex[length=5pt]}, thick, dashed, gray}
+]
+
+% ─── Stage 1 ───────────────────────────────────
+\node[frozen] (bert)    at (0,  4.2) {BERT-base\\(frozen)};
+\node[train]  (proj1)   at (0,  3.0) {Linear\\$256{\to}768$};
+\node[train]  (rb12)    at (0,  1.8) {$12\times$Transformer\\$d{=}768,H{=}12$};
+\node[frozen] (rv1)     at (0,  0.6) {\RetVec{}\\(frozen)};
+\node[loss]   (l1)      at (2.2, 3.6) {$\mathcal{L}_1$\\cosine};
+
+\draw[arr] (rv1)  -- (rb12);
+\draw[arr] (rb12) -- (proj1);
+\draw[darr](proj1) -- node[right,font=\scriptsize]{$\bz^{RB}$} (l1);
+\draw[darr](bert)  -- node[right,font=\scriptsize]{$\bz^{B}$}  (l1);
+
+\node[above=0pt of bert, font=\small\bfseries] {Stage 1};
+
+% ─── Stage 2 ───────────────────────────────────
+\node[frozen] (rb_t)   at (4.4, 4.2) {\RetBERT{}\\(frozen)};
+\node[train]  (proj2)  at (4.4, 3.0) {Linear\\$256{\to}768$};
+\node[train]  (tr4)    at (4.4, 1.8) {$4\times$Transformer\\$d{=}256,H{=}4$};
+\node[train]  (bigru)  at (4.4, 0.9) {BiGRU\\$128{\times}2$};
+\node[frozen] (rv2)    at (4.4, 0.0) {\RetVec{}\\(frozen)};
+\node[loss]   (l2)     at (6.6, 3.6) {$\mathcal{L}_2$\\token\\cosine};
+
+\draw[arr] (rv2)   -- (bigru);
+\draw[arr] (bigru) -- (tr4);
+\draw[arr] (tr4)   -- (proj2);
+\draw[darr](proj2) -- node[right,font=\scriptsize]{$\bp$}       (l2);
+\draw[darr](rb_t)  -- node[right,font=\scriptsize]{$\bh^{RB}$} (l2);
+
+\node[above=0pt of rb_t, font=\small\bfseries] {Stage 2};
+
+% ─── Stage 3 ───────────────────────────────────
+\node[frozen] (lr_t)   at (8.8, 4.2) {\LightRet{}\\teacher (frozen)};
+\node[train]  (nerh)   at (8.8, 3.2) {BiLSTM-NER\\$128{\times}2$};
+\node[train]  (tr4s)   at (8.8, 1.8) {$4\times$Transformer\\$d{=}256,H{=}4$};
+\node[train]  (bigrus) at (8.8, 0.9) {BiGRU\\$128{\times}2$};
+\node[frozen] (rv3)    at (8.8, 0.0) {\RetVec{}\\(frozen)};
+\node[loss]   (l3)     at (11.0,3.6) {$\mathcal{L}_3$\\class\,+\\distill};
+
+\draw[arr] (rv3)    -- (bigrus);
+\draw[arr] (bigrus) -- (tr4s);
+\draw[arr] (tr4s)   -- (nerh);
+\draw[darr](nerh)   -- (l3);
+\draw[darr](lr_t)   -- node[right,font=\scriptsize]{$\bh^T$} (l3);
+
+\node[above=0pt of lr_t, font=\small\bfseries] {Stage 3};
+
+% ─── Noise arrow ───────────────────────────────
+\draw[-{Latex}, thick, red!70!black]
+  ([xshift=-10pt]rv3.south)
+  -- ++(0,-0.45)
+  node[below, font=\scriptsize, align=center, red!70!black]
+       {noisy\\input $\tilde{\bw}$};
+
+\draw[-{Latex}, thick, blue!70!black]
+  ([xshift=10pt]lr_t.south)
+  -- ++(0,-3.3)
+  node[below, font=\scriptsize, align=center, blue!70!black]
+       {clean\\input $\bw$};
+
+\end{tikzpicture}
+\caption{The three-stage \LightRet{} training pipeline.
+  Blue boxes are frozen; orange boxes are trainable.
+  In Stage~3 the teacher (left) receives clean text $\bw$,
+  while the student (right) receives noisy text $\tilde{\bw}$.}
+\label{fig:pipeline}
+\end{figure}
+
+\subsection{Parameter Count Breakdown}
+
+For \LightRet{} the trainable parameters are distributed as follows:
+
+\begin{table}[h]
+\centering
+\caption{\LightRet{} parameter breakdown.}
+\label{tab:params}
+\begin{tabular}{lr}
+\toprule
+\textbf{Component} & \textbf{Parameters} \\
+\midrule
+\RetVec{} (frozen, not counted) & 256-d output \\
+BiGRU ($2 \times 3 \times 256 \times 128 \times 2$) & $\sim$787K \\
+$4\times$ Transformer ($d{=}256, H{=}4, \text{FFN}{=}1024$) & $\sim$2.6M \\
+BiLSTM NER head ($d{=}256{\to}256$) & $\sim$526K \\
+Linear classifier ($256{\to}9$) & $\sim$2.3K \\
+\midrule
+\textbf{Total} & $\bm{\sim}$\textbf{3.9M} \\
+\bottomrule
+\end{tabular}
+\end{table}

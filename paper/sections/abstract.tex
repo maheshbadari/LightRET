@@ -1,0 +1,28 @@
+% ============================================================
+%  Abstract
+% ============================================================
+\begin{abstract}
+Named entity recognition (NER) systems built on subword-tokenized language
+models are brittle to the character-level noise ubiquitous in real-world
+text---OCR errors, keyboard typos, transliteration artefacts, and deliberate
+obfuscation.  We introduce \LightRet{}, a lightweight, vocabulary-free NER
+model that achieves competitive accuracy on clean text while remaining robust
+under adversarial character noise.
+
+\LightRet{} is trained through a \emph{three-stage progressive distillation
+pipeline}: (1)~sentence-level knowledge distillation from \textsc{BERT} into
+a word-level \RetBERT{} student whose inputs are character embeddings;
+(2)~token-level compression from \RetBERT{} into a compact
+\textsc{BiGRU}--Transformer backbone; and (3)~noisy-student NER fine-tuning
+with stochastic character-level augmentation and dynamic BIO label projection.
+
+At its core, \LightRet{} uses \RetVec{}~\citep{sander2023retvec}---a frozen,
+pretrained character-level embedder---eliminating vocabulary constraints
+entirely.  On CoNLL-2003 English NER, \LightRet{} achieves
+\textbf{\todo{XX.X}~F1} on clean text and \textbf{\todo{XX.X}~F1} under 10\%
+character substitution noise, outperforming BERT-base by
+\textbf{\todo{+X.X}~F1} in the noisy setting while being
+\textbf{\(\approx28{\times}\) smaller} (${\sim}4$M vs.\ 110M parameters).
+\LightRet{} requires no tokenizer, processes arbitrary Unicode text, and runs
+efficiently on CPU-constrained deployments.
+\end{abstract}

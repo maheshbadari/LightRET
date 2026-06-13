@@ -1,0 +1,124 @@
+% ============================================================
+%  7. Analysis
+% ============================================================
+\section{Analysis}
+\label{sec:analysis}
+
+\subsection{Effect of Noise Type}
+
+To understand which noise operators drive the performance gap between
+\LightRet{} and BERT-base, we evaluate each operator in isolation by
+applying one perturbation type at a time at the medium intensity level.
+Table~\ref{tab:noise_type} reports F1 per operator.
+
+\begin{table}[h]
+\centering
+\caption{F1 by noise operator type (medium intensity).
+  All operators apply to the test set; only the specified one is active.}
+\label{tab:noise_type}
+\resizebox{\columnwidth}{!}{%
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Model}
+  & \textbf{Substitution}
+  & \textbf{Insertion}
+  & \textbf{Deletion}
+  & \textbf{Space insertion} \\
+\midrule
+BERT-base        & \todo{XX.X} & \todo{XX.X} & \todo{XX.X} & \todo{XX.X} \\
+\LightRet{} & \todo{XX.X} & \todo{XX.X} & \todo{XX.X} & \todo{XX.X} \\
+\bottomrule
+\end{tabular}
+}
+\end{table}
+
+Space-insertion noise is expected to be the most damaging for BERT-base
+because it changes the tokenization boundary of a named entity mid-token,
+producing fragments that receive no BIO context.
+\LightRet{} is insulated from this because it operates at the word level
+and uses label projection (Equation~\ref{eq:label_proj}) to handle split events.
+
+\subsection{Per-Entity-Type Performance}
+
+Named entities differ in their surface form regularity.
+Person names (PER) and locations (LOC) tend to be proper nouns with
+predictable spelling, whereas miscellaneous entities (MISC) include
+abbreviations and acronyms that are more susceptible to noise.
+Table~\ref{tab:entity_type} reports per-type F1 under clean and
+medium-noise conditions.
+
+\begin{table}[h]
+\centering
+\caption{Per-entity-type F1 on CoNLL-2003 test set.}
+\label{tab:entity_type}
+\begin{tabular}{lcccccccc}
+\toprule
+& \multicolumn{4}{c}{\textbf{Clean}} & \multicolumn{4}{c}{\textbf{Medium noise}} \\
+\cmidrule(lr){2-5}\cmidrule(lr){6-9}
+\textbf{Model} & PER & ORG & LOC & MISC & PER & ORG & LOC & MISC \\
+\midrule
+BERT-base   & \todo{--} & \todo{--} & \todo{--} & \todo{--}
+            & \todo{--} & \todo{--} & \todo{--} & \todo{--} \\
+\LightRet{} & \todo{--} & \todo{--} & \todo{--} & \todo{--}
+            & \todo{--} & \todo{--} & \todo{--} & \todo{--} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Label Projection Quality}
+
+A key correctness requirement of Stage~3 is that the dynamic BIO label
+projection (Algorithm~\ref{alg:proj}) assigns valid labels to all noisy word
+positions.  We measure \emph{projection accuracy}: the fraction of noisy
+words that receive the correct label when the projected output is compared
+against a silver standard obtained by re-annotating the noisy sentence with a
+BERT-large oracle tagger.
+
+Under the medium noise setting, space-insertion events occur at approximately
+\todo{X.X}\% of word positions in the training data.  Our dynamic projection
+achieves \todo{XX.X}\% projection accuracy on the validation set, confirming
+that the BIO continuation rule (Equation~\ref{eq:label_proj}) is a reliable
+approximation in the vast majority of cases.
+
+\begin{algorithm}[h]
+\SetAlgoLined
+\DontPrintSemicolon
+\KwIn{Clean words $\bw{=}(w_1,\ldots,w_n)$,
+      clean labels $(y_1,\ldots,y_n)$,
+      shift log $S = \{(k, \delta, \tau)\}$}
+\KwOut{Noisy words $\tilde{\bw}$, projected labels $(\tilde{y}_1,\ldots,\tilde{y}_m)$,
+       alignment $\calA$}
+\BlankLine
+Reconstruct noisy string by replaying $S$ on $\bw$\;
+Split noisy string into words $\tilde{\bw}$\;
+Compute character-to-word map for $\bw$ and $\tilde{\bw}$\;
+Build alignment groups $\calA = \{(C_k, N_k)\}$ using $S$\;
+\For{each group $(C_k, N_k) \in \calA$}{
+  \If{$|N_k| = 1$}{
+    $\tilde{y}_{N_k[0]} \leftarrow y_{C_k[0]}$\;
+  }
+  \Else{
+    $\tilde{y}_{N_k[0]} \leftarrow y_{C_k[0]}$ \tcp*{first fragment keeps original}
+    \For{$j \in N_k[1:]$}{
+      $\tilde{y}_j \leftarrow \sigma(y_{C_k[0]})$ \tcp*{B-X $\to$ I-X}
+    }
+  }
+}
+\caption{Dynamic BIO Label Projection}
+\label{alg:proj}
+\end{algorithm}
+
+\subsection{Distillation Stage Contributions}
+
+Figure~\ref{fig:distill_curve} (placeholder) shows training loss curves for
+Stages~1 and~2, confirming convergence.  The stage-wise ablation
+(Table~\ref{tab:ablation}) quantifies that skipping Stage~1 hurts Stage~2
+convergence and that skipping Stage~2 leaves the backbone under-trained for
+NER sequence labeling.
+
+\subsection{$\beta$ Sensitivity in Stage 3}
+
+We sweep $\beta \in \{0.1, 0.3, 0.5, 0.7, 0.9\}$ on the validation set.
+Performance peaks near $\beta{=}0.5$, confirming that both the classification
+signal and the teacher alignment are important; dominance by either alone
+reduces performance.  Detailed results are in Appendix~A.

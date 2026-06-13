@@ -1,0 +1,226 @@
+% ============================================================
+%  4. Proposed Method
+% ============================================================
+\section{Proposed Method}
+\label{sec:method}
+
+\subsection{Overview}
+
+\LightRet{} is trained via a three-stage progressive distillation pipeline:
+\[
+  \underbrace{\textsc{BERT}}_{\text{Teacher}_1}
+  \;\xrightarrow{\;\text{Stage 1}\;}
+  \underbrace{\RetBERT{}}_{\text{Teacher}_2}
+  \;\xrightarrow{\;\text{Stage 2}\;}
+  \underbrace{\LightRet{}}_{\text{Backbone}}
+  \;\xrightarrow{\;\text{Stage 3}\;}
+  \underbrace{\LightRet{}\text{-NER}}_{\text{Final model}}
+\]
+Each stage uses a frozen teacher to supervise a smaller student via a
+task-specific distillation loss, bridging the representational gap between the
+full BERT encoder and the final compact model progressively.
+
+% ─────────────────────────────────────────────────
+\subsection{Stage 1: Sentence-Level Distillation
+            (\textsc{BERT}\,$\to$\,\RetBERT{})}
+\label{subsec:stage1}
+
+\paragraph{Teacher.}
+BERT-base-uncased~\citep{devlin2019bert} (110M params, all frozen).
+Its sentence representation is the mean of the final-layer hidden states:
+\begin{equation}
+  \bz^{B} \;=\; \frac{1}{|\bw|}\sum_{i=1}^{|\bw|} \bh^{B}_{i}
+  \;\in\; \RR^{768}.
+  \label{eq:bert_sent}
+\end{equation}
+
+\paragraph{Student: \RetBERT{}.}
+\RetBERT{} replaces BERT's WordPiece embedding lookup with a frozen
+\RetVec{} embedder followed by a linear projection:
+\begin{equation}
+  \bh^{(0)}_{i}
+  \;=\;
+  \bW_{p}\,\RetVec(w_i) \;+\; \text{PE}(i),
+  \quad \bW_{p} \in \RR^{768 \times 256},
+  \label{eq:retbert_input}
+\end{equation}
+where $\text{PE}(i)$ is the fixed sinusoidal positional encoding
+of~\citet{vaswani2017attention}.
+The student then applies $L_{RB}=12$ standard pre-LayerNorm Transformer
+encoder layers~\citep{xiong2020layer}:
+\begin{equation}
+  \bh^{(\ell)}_{i}
+  \;=\;
+  \text{TransformerLayer}_{\,d=768,\;H=12}
+  \!\left(\bh^{(\ell-1)}\right)_{i},
+  \quad \ell = 1, \ldots, 12.
+  \label{eq:retbert_layers}
+\end{equation}
+Its sentence representation is:
+\begin{equation}
+  \bz^{RB} \;=\; \frac{1}{n}\sum_{i=1}^{n} \bh^{(12)}_{i}
+  \;\in\; \RR^{768}.
+  \label{eq:retbert_sent}
+\end{equation}
+
+\paragraph{Loss.}
+We minimise the cosine distance between teacher and student sentence vectors:
+\begin{equation}
+  \calL_{1}
+  \;=\;
+  1 - \frac{\bz^{B} \cdot \bz^{RB}}
+           {\|\bz^{B}\| \cdot \|\bz^{RB}\|}
+  \;\in\; [0,\, 2].
+  \label{eq:loss1}
+\end{equation}
+Optimising $\calL_1$ directly encourages \RetBERT{} to produce
+BERT-compatible sentence representations from character-level inputs, without
+requiring intermediate layer matching.
+
+% ─────────────────────────────────────────────────
+\subsection{Stage 2: Token-Level Compression
+            (\RetBERT{}\,$\to$\,\LightRet{})}
+\label{subsec:stage2}
+
+\paragraph{Teacher.}
+\RetBERT{} (frozen after Stage 1) produces per-token hidden states
+$\{\bh^{RB}_{i}\}_{i=1}^{n} \subset \RR^{768}$.
+
+\paragraph{Student: \LightRet{} backbone.}
+\LightRet{} is a compact BiGRU--Transformer model operating in a
+$d=256$-dimensional space:
+\begin{align}
+  \be_i &= \RetVec(w_i) \;\in\; \RR^{256},
+  \label{eq:lr_embed}\\[4pt]
+  \bg_i &= \bigl[
+             \overrightarrow{\text{GRU}}_{128}(\be_{1:n})_i\;;\;
+             \overleftarrow{\text{GRU}}_{128}(\be_{1:n})_i
+           \bigr]
+           \;\in\; \RR^{256},
+  \label{eq:lr_bigru}\\[4pt]
+  \bh^{(\ell)}_i &= \text{TransformerLayer}_{\,d=256,\;H=4}
+                    \!\left(\bh^{(\ell-1)}\right)_i,
+                    \quad \ell = 1,\ldots,4,
+  \label{eq:lr_transformer}
+\end{align}
+where $\bh^{(0)} \coloneqq \bg$.
+
+For Stage~2 only, a temporary linear projector aligns the student's
+output dimension to the teacher's:
+\begin{equation}
+  \bp_i \;=\; \bW_{\text{proj}}\,\bh^{(4)}_i + \bb_{\text{proj}},
+  \quad \bW_{\text{proj}} \in \RR^{768 \times 256}.
+  \label{eq:lr_proj}
+\end{equation}
+This projector is \emph{discarded} before Stage~3.
+
+\paragraph{Loss.}
+Token-level cosine distillation with sequence-length masking:
+\begin{equation}
+  \calL_{2}
+  \;=\;
+  \frac{1}{n} \sum_{i=1}^{n}
+  \left(
+    1 - \frac{\bh^{RB}_{i} \cdot \bp_{i}}
+             {\|\bh^{RB}_{i}\| \cdot \|\bp_{i}\|}
+  \right).
+  \label{eq:loss2}
+\end{equation}
+By supervising every token position, Stage~2 teaches \LightRet{} the
+\emph{contextual} structure of \RetBERT{}'s hidden space, not just sentence
+summaries.
+
+% ─────────────────────────────────────────────────
+\subsection{Stage 3: Noisy-Student NER Fine-Tuning}
+\label{subsec:stage3}
+
+\subsubsection{Model Setup}
+
+After Stage~2, the projector is removed and a BiLSTM NER head is attached:
+\begin{align}
+  \bs_i &= \bigl[
+             \overrightarrow{\text{LSTM}}_{128}(\bH)_i \;;\;
+             \overleftarrow{\text{LSTM}}_{128}(\bH)_i
+           \bigr]
+           \;\in\; \RR^{256},
+  \label{eq:ner_bilstm}\\
+  \text{logits}_i &= \bW_{c}\,\bs_i + \bb_{c},
+  \quad \bW_{c} \in \RR^{|\calY| \times 256}.
+  \label{eq:ner_logits}
+\end{align}
+where $\bH = \{\bh^{(4)}_i\}_{i=1}^{m}$ is the backbone output for
+\emph{noisy} input words.
+
+\subsubsection{Noise Augmentation}
+
+Each clean training sentence $\bw$ is perturbed character-by-character using
+the operators of Equations~\eqref{eq:nsub}--\eqref{eq:nspace} with
+$p_{\text{sub}}{=}0.10$, $p_{\text{ins}}{=}0.05$,
+$p_{\text{del}}{=}0.05$, $p_{\text{space}}{=}0.02$.
+A \emph{shift log} records each edit as a triple
+$(k, \delta, \tau)$ where $k$ is the character position, $\delta \in \{-1,0,+1\}$
+is the length change, and $\tau \in \{\text{sub},\text{ins},\text{del},\text{space}\}$
+is the operation type.
+
+\subsubsection{Dynamic BIO Label Projection}
+\label{subsec:label_proj}
+
+Because $\calN_{\text{space}}$ can increase the word count ($m > n$), we
+cannot naively copy labels from $\bw$ to $\tilde{\bw}$.  We define a
+word-level alignment $\calA = \{(C_k, N_k)\}_{k=1}^{K}$ derived from the
+shift log, where $C_k \subseteq \{1,\ldots,n\}$ and
+$N_k \subseteq \{1,\ldots,m\}$ are the sets of clean and noisy word indices
+in the $k$-th group.  Labels are projected as follows:
+
+\begin{equation}
+\tilde{y}_j \;=\;
+\begin{dcases}
+  y_{C_k[0]}                 & \text{if } |C_k|=|N_k|=1 \quad \text{(1:1)},\\
+  y_{C_k[0]}                 & \text{if } |N_k|=1 \quad \text{(merge: many clean} \to \text{one noisy)},\\
+  y_{C_k[0]}                 & \text{if } j = N_k[0] \quad \text{(split: first fragment)},\\
+  \sigma\!\left(y_{C_k[0]}\right) & \text{if } j \in N_k\setminus\{N_k[0]\} \quad \text{(split: continuation fragments)},
+\end{dcases}
+\label{eq:label_proj}
+\end{equation}
+where the continuation function $\sigma : \calY \to \calY$ maps
+\texttt{B-X} $\mapsto$ \texttt{I-X} and is the identity on all other labels.
+This ensures BIO validity is preserved after word splitting.
+
+\subsubsection{Stage 3 Loss}
+
+The teacher (\LightRet{}, frozen, clean input) and student (\LightRet{}
++ NER head, trainable, noisy input) are trained jointly.
+Let $\bH^{T} = \{\bh^{T}_{i}\}_{i=1}^{n}$ be the teacher's hidden states
+and $\bH^{S} = \{\bh^{S}_{j}\}_{j=1}^{m}$ be the student's.
+
+For alignment-aware distillation, each group $k$ contributes the
+cosine distance between the teacher's representation of group $C_k$ and
+the student's representation of group $N_k$:
+\begin{equation}
+  \bh^{T}_{(k)} \;=\; \frac{1}{|C_k|}\sum_{i \in C_k} \bh^{T}_{i},
+  \qquad
+  \bh^{S}_{(k)} \;=\; \frac{1}{|N_k|}\sum_{j \in N_k} \bh^{S}_{j}.
+  \label{eq:align_pool}
+\end{equation}
+
+The distillation and classification losses are:
+\begin{align}
+  \calL_{\text{distill}}
+  &= \frac{1}{K} \sum_{k=1}^{K}
+     \left(1 - \frac{\bh^{T}_{(k)} \cdot \bh^{S}_{(k)}}
+                    {\|\bh^{T}_{(k)}\| \cdot \|\bh^{S}_{(k)}\|}\right),
+  \label{eq:loss_distill}\\[6pt]
+  \calL_{\text{class}}
+  &= -\frac{1}{m} \sum_{j=1}^{m}
+     \sum_{c=1}^{|\calY|} \mathbf{1}[\tilde{y}_j = c]
+     \log \hat{p}_{j,c},
+  \label{eq:loss_class}
+\end{align}
+where $\hat{p}_{j,c} = \text{softmax}(\text{logits}_j)_c$.
+The combined Stage~3 loss is:
+\begin{equation}
+  \calL_{3} \;=\; \beta\,\calL_{\text{class}}
+               \;+\; (1-\beta)\,\calL_{\text{distill}},
+  \quad \beta = 0.5.
+  \label{eq:loss3}
+\end{equation}

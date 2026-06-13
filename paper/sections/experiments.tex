@@ -1,0 +1,173 @@
+% ============================================================
+%  6. Experimental Results
+% ============================================================
+\section{Experimental Results}
+\label{sec:experiments}
+
+\subsection{Datasets}
+
+\paragraph{CoNLL-2003 NER.}
+The standard English NER benchmark~\citep{tjong2003conll} contains 14,987
+training, 3,466 validation, and 3,684 test sentences drawn from Reuters news
+wire, annotated with the PER / ORG / LOC / MISC BIO schema ($|\calY|=9$).
+We report entity-level F1 using the \texttt{seqeval} scorer.
+
+\paragraph{Distillation corpus.}
+Stages~1 and~2 use WikiText-103-raw-v1~\citep{merity2017pointer}
+(${\sim}103$M words of Wikipedia) together with CoNLL-2003 training sentences
+as the distillation corpus (${\sim}3.9$M sentences after sentence splitting and
+filtering for $\geq 4$ words).
+
+\subsection{Training Setup}
+
+\begin{table}[h]
+\centering
+\caption{Hyperparameters per stage.}
+\label{tab:hparams}
+\begin{tabular}{lrrr}
+\toprule
+\textbf{Hyperparameter} & \textbf{Stage 1} & \textbf{Stage 2} & \textbf{Stage 3} \\
+\midrule
+Epochs          & 5     & 5     & 10    \\
+Batch size      & 32    & 64    & 32    \\
+Learning rate   & 5e-5  & 3e-4  & 2e-4  \\
+Warmup steps    & 1000  & 500   & 200   \\
+Max words       & 64    & 64    & 64    \\
+Weight decay    & 0.01  & 0.01  & 0.01  \\
+Grad.\ clip     & 1.0   & 1.0   & 1.0   \\
+$\beta$ (Eq.~\ref{eq:loss3}) & -- & -- & 0.5 \\
+Optimizer       & \multicolumn{3}{c}{AdamW~\citep{loshchilov2019decoupled}} \\
+LR schedule     & \multicolumn{3}{c}{Cosine with linear warmup} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Noise probabilities (Stage~3).}
+$p_{\text{sub}}{=}0.10$, $p_{\text{ins}}{=}0.05$,
+$p_{\text{del}}{=}0.05$, $p_{\text{space}}{=}0.02$.
+
+\paragraph{Hardware.}
+All models trained on a single NVIDIA Tesla~T4 (16\,GB) via Kaggle
+GPU sessions.  Inference benchmarks reported on the same GPU and on
+Intel Xeon (single-threaded, CPU).
+
+\subsection{Baselines}
+
+\begin{itemize}
+  \item \textbf{BiLSTM-CRF + CharCNN}: Classical character-aware NER
+        of~\citet{ma2016end}.
+  \item \textbf{DistilBERT}: Knowledge-distilled BERT~\citep{sanh2019distilbert},
+        66M params, fine-tuned with a linear NER head.
+  \item \textbf{BERT-base}: Standard fine-tuned NER
+        baseline~\citep{devlin2019bert}, 110M params.
+  \item \textbf{CharBERT}: Character-augmented BERT~\citep{ma2020charbert},
+        114M params.
+\end{itemize}
+
+\subsection{Noise Evaluation Protocol}
+
+We apply the noise operator $\calN$ (Equations~\ref{eq:nsub}--\ref{eq:nspace})
+to the CoNLL-2003 \emph{test} split at three noise intensities:
+
+\begin{table}[h]
+\centering
+\caption{Noise levels used in evaluation.}
+\label{tab:noise_levels}
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Level} & $p_{\text{sub}}$ & $p_{\text{ins}}$ & $p_{\text{del}}$ & $p_{\text{space}}$ \\
+\midrule
+Low    & 0.05 & 0.02 & 0.02 & 0.01 \\
+Medium & 0.10 & 0.05 & 0.05 & 0.02 \\
+High   & 0.20 & 0.10 & 0.10 & 0.05 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Each evaluation is run five times with different random seeds; we report mean
+F1.
+
+\subsection{Main Results}
+
+\begin{table}[h]
+\centering
+\caption{CoNLL-2003 entity-level F1 on clean test set.}
+\label{tab:clean}
+\begin{tabular}{lrr}
+\toprule
+\textbf{Model} & \textbf{Params} & \textbf{F1} \\
+\midrule
+BiLSTM-CRF + CharCNN~\citep{ma2016end}  & $\sim$8M  & 90.94 \\
+DistilBERT~\citep{sanh2019distilbert}   & 66M       & 90.70 \\
+BERT-base~\citep{devlin2019bert}        & 110M      & 92.14 \\
+CharBERT~\citep{ma2020charbert}         & 114M      & 92.61 \\
+\midrule
+\textbf{\LightRet{} (ours)}             & \textbf{$\sim$4M} & \textbf{\todo{XX.X}} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[h]
+\centering
+\caption{NER F1 under character noise.  \textbf{Bold} = best per column.}
+\label{tab:noisy}
+\resizebox{\columnwidth}{!}{%
+\begin{tabular}{lrcccc}
+\toprule
+\textbf{Model} & \textbf{Params} & \textbf{Clean} & \textbf{Low} & \textbf{Medium} & \textbf{High} \\
+\midrule
+BERT-base   & 110M & 92.14 & \todo{XX.X} & \todo{XX.X} & \todo{XX.X} \\
+CharBERT    & 114M & 92.61 & \todo{XX.X} & \todo{XX.X} & \todo{XX.X} \\
+DistilBERT  &  66M & 90.70 & \todo{XX.X} & \todo{XX.X} & \todo{XX.X} \\
+\midrule
+\textbf{\LightRet{}} & \textbf{$\sim$4M}
+                     & \textbf{\todo{XX.X}}
+                     & \textbf{\todo{XX.X}}
+                     & \textbf{\todo{XX.X}}
+                     & \textbf{\todo{XX.X}} \\
+\bottomrule
+\end{tabular}
+}
+\end{table}
+
+\subsection{Ablation Study}
+
+Table~\ref{tab:ablation} isolates the contribution of each component.
+
+\begin{table}[h]
+\centering
+\caption{Ablation on CoNLL-2003 (F1).  ``Medium'' = medium noise level.}
+\label{tab:ablation}
+\resizebox{\columnwidth}{!}{%
+\begin{tabular}{lcc}
+\toprule
+\textbf{Configuration} & \textbf{Clean} & \textbf{Medium} \\
+\midrule
+\LightRet{} (full, 3-stage)                  & \todo{XX.X} & \todo{XX.X} \\
+\quad w/o Stage~1 (skip \RetBERT{})          & \todo{XX.X} & \todo{XX.X} \\
+\quad w/o Stage~2 (direct NER finetune)      & \todo{XX.X} & \todo{XX.X} \\
+\quad w/o noise augmentation in Stage~3      & \todo{XX.X} & \todo{XX.X} \\
+\quad $\calL_3 = \calL_{\text{class}}$ only ($\beta{=}1$) & \todo{XX.X} & \todo{XX.X} \\
+\quad $\calL_3 = \calL_{\text{distill}}$ only ($\beta{=}0$) & \todo{XX.X} & \todo{XX.X} \\
+\quad Replace \RetVec{} with random char emb. & \todo{XX.X} & \todo{XX.X} \\
+\bottomrule
+\end{tabular}
+}
+\end{table}
+
+\subsection{Inference Speed and Memory}
+
+\begin{table}[h]
+\centering
+\caption{Inference efficiency (single sentence, batch\,=\,1).}
+\label{tab:speed}
+\begin{tabular}{lrcc}
+\toprule
+\textbf{Model} & \textbf{Params} & \textbf{GPU (ms)} & \textbf{CPU (ms)} \\
+\midrule
+BERT-base  & 110M & \todo{X.X} & \todo{XX.X} \\
+DistilBERT &  66M & \todo{X.X} & \todo{XX.X} \\
+\textbf{\LightRet{}} & \textbf{$\sim$4M} & \textbf{\todo{X.X}} & \textbf{\todo{X.X}} \\
+\bottomrule
+\end{tabular}
+\end{table}

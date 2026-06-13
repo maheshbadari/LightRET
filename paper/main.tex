@@ -1,0 +1,137 @@
+% ============================================================
+%  LightRet — Main Paper
+%  Compiler: pdflatex (or xelatex)
+%  Build:    pdflatex main && bibtex main && pdflatex main && pdflatex main
+% ============================================================
+\documentclass[10pt,twocolumn]{article}
+
+% ── Page geometry ───────────────────────────────────────────
+\usepackage[
+  top=1in, bottom=1in,
+  left=0.75in, right=0.75in,
+  columnsep=0.25in
+]{geometry}
+
+% ── Core packages ───────────────────────────────────────────
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{amsthm}
+\usepackage{mathtools}          % dcases, \coloneqq, etc.
+\usepackage{bm}                 % bold math \bm{}
+
+% ── Fonts ───────────────────────────────────────────────────
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+
+% ── Graphics / TikZ ─────────────────────────────────────────
+\usepackage{graphicx}
+\usepackage{tikz}
+\usetikzlibrary{
+  shapes.geometric, arrows.meta,
+  positioning, fit, backgrounds,
+  decorations.pathreplacing, calc
+}
+
+% ── Tables ──────────────────────────────────────────────────
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{array}
+\usepackage{tabularx}
+
+% ── Algorithms ──────────────────────────────────────────────
+\usepackage[ruled,vlined,linesnumbered]{algorithm2e}
+
+% ── Colors / hyperlinks ─────────────────────────────────────
+\usepackage[dvipsnames]{xcolor}
+\usepackage[
+  colorlinks=true,
+  linkcolor=MidnightBlue,
+  citecolor=ForestGreen,
+  urlcolor=MidnightBlue
+]{hyperref}
+
+% ── Bibliography ────────────────────────────────────────────
+\usepackage{natbib}
+\bibliographystyle{abbrvnat}
+\setcitestyle{authoryear,open={(},close={)}}
+
+% ── Section styling ─────────────────────────────────────────
+\usepackage{titlesec}
+\titleformat{\section}{\large\bfseries}{\thesection.}{0.5em}{}
+\titleformat{\subsection}{\normalsize\bfseries}{\thesubsection}{0.5em}{}
+\titleformat{\subsubsection}{\normalsize\itshape}{\thesubsubsection}{0.5em}{}
+
+% ── Caption styling ─────────────────────────────────────────
+\usepackage[font=small,labelfont=bf,skip=4pt]{caption}
+
+% ── Miscellaneous ───────────────────────────────────────────
+\usepackage{enumitem}
+\setlist{noitemsep, topsep=2pt}
+\usepackage{balance}
+\usepackage{lipsum}             % remove when filling real content
+
+% ── Custom commands ─────────────────────────────────────────
+\newcommand{\bx}{\bm{x}}
+\newcommand{\be}{\bm{e}}
+\newcommand{\bg}{\bm{g}}
+\newcommand{\bh}{\bm{h}}
+\newcommand{\bp}{\bm{p}}
+\newcommand{\bs}{\bm{s}}
+\newcommand{\bw}{\bm{w}}
+\newcommand{\bz}{\bm{z}}
+\newcommand{\bW}{\bm{W}}
+\newcommand{\bb}{\bm{b}}
+\newcommand{\calL}{\mathcal{L}}
+\newcommand{\calN}{\mathcal{N}}
+\newcommand{\calA}{\mathcal{A}}
+\newcommand{\calY}{\mathcal{Y}}
+\newcommand{\RR}{\mathbb{R}}
+\newcommand{\RetVec}{\textsc{RetVec}}
+\newcommand{\LightRet}{\textsc{LightRet}}
+\newcommand{\RetBERT}{\textsc{RetBERT}}
+\newcommand{\todo}[1]{\textcolor{red}{\textbf{[TODO: #1]}}}
+
+% ── Title block ─────────────────────────────────────────────
+\title{%
+  \vspace{-1em}
+  \LARGE\bfseries
+  \LightRet{}: A Lightweight, Vocabulary-Free\\
+  Named Entity Recognizer via\\
+  Noisy-Student Progressive Distillation
+}
+
+\author{%
+  Lakshmi Harika Badari \\
+  \normalsize AI Research Division \\
+  \normalsize \textit{[Company Name]} \\
+  \normalsize \texttt{maheshbadari@gmail.com}
+}
+
+\date{}
+
+% ============================================================
+\begin{document}
+% ============================================================
+
+\maketitle
+\thispagestyle{empty}
+
+% ────────────────────────────────────────────────────────────
+\input{sections/abstract}
+\input{sections/introduction}
+\input{sections/related_work}
+\input{sections/problem}
+\input{sections/method}
+\input{sections/architecture}
+\input{sections/experiments}
+\input{sections/analysis}
+\input{sections/future_work}
+\input{sections/conclusion}
+
+% ── Bibliography ────────────────────────────────────────────
+\balance
+\bibliography{references}
+
+\end{document}

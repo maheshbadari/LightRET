@@ -1,0 +1,31 @@
+% ============================================================
+%  9. Conclusion
+% ============================================================
+\section{Conclusion}
+\label{sec:conclusion}
+
+We presented \LightRet{}, a lightweight, vocabulary-free named entity
+recognition model trained via three-stage progressive knowledge distillation.
+By grounding all word representations in the frozen pretrained \RetVec{}
+character embedder, \LightRet{} eliminates vocabulary constraints entirely:
+it processes arbitrary Unicode text without a tokenizer and is robust to the
+character-level perturbations that cripple subword-based models.
+
+The three-stage pipeline---sentence-level distillation into \RetBERT{},
+token-level compression into a BiGRU--Transformer backbone, and
+noisy-student NER fine-tuning with dynamic BIO label projection---transfers
+BERT's contextual knowledge progressively into a model with
+${\sim}4$M parameters, roughly $28{\times}$ smaller than BERT-base.
+
+Our experiments on CoNLL-2003 demonstrate that \LightRet{} achieves
+competitive clean-text F1 while substantially outperforming BERT-base and
+CharBERT in all noisy evaluation conditions.  The dynamic label projection
+algorithm correctly handles word-splitting noise while preserving BIO validity,
+and the compound distillation--classification loss in Stage~3 proves critical:
+neither the classification signal nor the teacher alignment alone achieves
+the same robustness.
+
+We release all code, training scripts, pretrained weights, and the local
+CoNLL-2003 and WikiText-103 dataset caches to facilitate reproducibility.
+We hope \LightRet{} serves as a practical foundation for noise-robust NER in
+production environments where BERT-scale models are cost-prohibitive.

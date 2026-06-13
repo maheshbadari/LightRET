@@ -1,0 +1,49 @@
+% ============================================================
+%  3. Problem Formulation
+% ============================================================
+\section{Problem Formulation}
+\label{sec:problem}
+
+\paragraph{Clean NER.}
+Let $\bw = (w_1, \ldots, w_n)$ be a sentence of $n$ words.  NER assigns each
+word a label $y_i \in \calY$ from a BIO tag set:
+\[
+  \calY = \bigl\{
+    \texttt{O},\;
+    \texttt{B-PER},\;\texttt{I-PER},\;
+    \texttt{B-ORG},\;\texttt{I-ORG},\;
+    \texttt{B-LOC},\;\texttt{I-LOC},\;
+    \texttt{B-MISC},\;\texttt{I-MISC}
+  \bigr\},
+  \quad |\calY| = 9.
+\]
+The goal is to learn $f_\theta : \bw \mapsto (y_1,\ldots,y_n)$ that maximises
+entity-level F1 on the CoNLL-2003 test set.
+
+\paragraph{Noisy NER.}
+A stochastic character-level perturbation operator
+$\calN : \bw \mapsto \tilde{\bw}$ is applied to the input sentence, where
+$\tilde{\bw} = (\tilde{w}_1, \ldots, \tilde{w}_m)$ with $m \neq n$ in
+general.  Four perturbation types are supported:
+\begin{align}
+  \calN_{\text{sub}}   &: c \;\leftarrow\; \text{Uniform}(\text{visually-similar}(c))
+                        \quad \text{with prob.}\ p_{\text{sub}}, \label{eq:nsub}\\
+  \calN_{\text{ins}}   &: \text{insert random } c' \text{ at position } k
+                        \quad \text{with prob.}\ p_{\text{ins}}, \label{eq:nins}\\
+  \calN_{\text{del}}   &: \text{delete character at position } k
+                        \quad \text{with prob.}\ p_{\text{del}}, \label{eq:ndel}\\
+  \calN_{\text{space}} &: \text{insert space at position } k \text{ within word}
+                        \quad \text{with prob.}\ p_{\text{space}}. \label{eq:nspace}
+\end{align}
+The composite operator applies all four perturbations independently per
+character in sequence.  Because $\calN_{\text{space}}$ can split one word into
+two, the noisy word count $m$ may differ from $n$, requiring \emph{label
+projection} (Section~\ref{subsec:label_proj}).
+
+The objective in the noisy setting is to train $f_\theta$ such that accuracy
+on $\tilde{\bw}$ degrades as little as possible relative to $\bw$.
+
+\paragraph{Scope.}
+We do not assume the noise level is known at test time; the model must be
+robust across the full range of perturbations without noise-level
+conditioning.

@@ -1,0 +1,50 @@
+% ============================================================
+%  8. Future Work
+% ============================================================
+\section{Future Work}
+\label{sec:future}
+
+\paragraph{CRF decoding.}
+Replacing the softmax output layer with a Conditional Random
+Field~\citep{lafferty2001crf} would enforce valid BIO transition constraints
+globally.  This is particularly beneficial under high noise, where isolated
+\texttt{I-X} predictions without a preceding \texttt{B-X} become more common.
+
+\paragraph{Multilingual extension.}
+\RetVec{} is language-agnostic by design: it hashes Unicode code points rather
+than looking up a vocabulary.  Applying the same distillation pipeline with
+mBERT~\citep{devlin2019bert} or XLM-R~\citep{conneau2020unsupervised} as
+teacher would yield a single multilingual \LightRet{} without per-language
+vocabularies, directly applicable to cross-lingual NER transfer.
+
+\paragraph{Noise curriculum learning.}
+The current Stage~3 noise schedule applies fixed perturbation probabilities
+throughout training.  Progressive noise curricula~\citep{bengio2009curriculum}
+---starting from clean text and gradually increasing perturbation intensity---may
+improve convergence and final robustness, particularly in the high-noise regime.
+
+\paragraph{CRF-augmented label projection.}
+The dynamic BIO projection (Section~\ref{subsec:label_proj}) uses a
+deterministic rule for continuation labels.  A learned projection that
+scores all possible label sequences for a merged or split group jointly
+would reduce projection errors in complex cases (e.g., space insertion
+inside a multi-word named entity).
+
+\paragraph{Structured prediction with noisy output.}
+Stage~3 currently treats noisy-word NER as a flat sequence labeling task.
+Span-based decoders~\citep{joshi2020spanbert,shen2021locate} could be
+explored, as they are less sensitive to word boundary shifts and naturally
+handle overlapping or discontiguous mentions.
+
+\paragraph{On-device deployment.}
+At ${\sim}4$M parameters, \LightRet{} occupies ${\sim}16$\,MB in float32.
+Post-training quantisation to INT8 would reduce this to ${\sim}4$\,MB,
+enabling deployment in mobile NLP pipelines and edge devices where BERT-scale
+models are impractical.
+
+\paragraph{Domain adaptation.}
+The distillation corpus (WikiText-103 + CoNLL-2003) is news-domain heavy.
+Domain-adaptive distillation~\citep{xu2020bert} on clinical, legal, or
+social-media text is a natural next step, especially given \LightRet{}'s
+vocabulary-free backbone which does not suffer from OOV degradation in
+specialised terminologies.

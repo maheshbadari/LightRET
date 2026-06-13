@@ -1,0 +1,63 @@
+% ============================================================
+%  2. Related Work
+% ============================================================
+\section{Related Work}
+\label{sec:related}
+
+\subsection{Transformer-Based NER}
+
+BERT~\citep{devlin2019bert} established a new state of the art on CoNLL-2003
+NER at 92.8~F1 by fine-tuning the full encoder with a linear classification
+head.  Subsequent models---RoBERTa~\citep{liu2019roberta},
+ALBERT~\citep{lan2020albert}, and SpanBERT~\citep{joshi2020spanbert}---improved
+further.  All of these models share the fundamental limitation that their
+subword tokenizers impose a fixed vocabulary and produce unpredictable
+fragmentation of out-of-vocabulary (OOV) or misspelled tokens.
+
+\subsection{Character-Level and Hybrid Models}
+
+Early neural NER systems built word representations from character
+CNNs~\citep{ma2016end} or BiLSTMs~\citep{lample2016neural}, achieving strong
+OOV handling but lacking contextual pretraining.  CharBERT~\citep{ma2020charbert}
+augments BERT's token embeddings with a parallel character-interaction channel
+while sharing the same WordPiece tokenizer, improving robustness at the cost
+of doubling the effective parameter count.
+
+ByT5~\citep{xue2022byt5} and CANINE~\citep{clark2022canine} operate entirely
+at the byte or character level, demonstrating that vocabulary-free encoding is
+feasible in large Transformer models.  However, byte-level models require
+significantly more compute per word due to the much longer input sequences.
+\LightRet{} uses a \emph{pretrained} character embedder (\RetVec{}) rather
+than learning character representations from scratch, achieving comparable
+representational quality at far lower parameter count.
+
+\subsection{Robustness to Noisy Text}
+
+\citet{belinkov2018synthetic} showed systematic degradation of neural MT
+models under character-level perturbations.  \citet{pruthi2019combating}
+proposed a word-recognition model inserted before the NLP model as a defence,
+but the subword tokenizer boundary remains a bottleneck.  Data-augmentation
+approaches~\citep{wei2019eda,zhu2020freelb} fine-tune existing subword models
+on perturbed text; \LightRet{} avoids this limitation entirely by operating at
+the word level throughout.
+
+\subsection{Knowledge Distillation for NLP}
+
+DistilBERT~\citep{sanh2019distilbert}, TinyBERT~\citep{jiao2020tinybert}, and
+MobileBERT~\citep{sun2020mobilebert} distil BERT into smaller Transformer
+students, reducing parameters by 40--60\% with minimal accuracy loss.  All
+remain subword-based.  Our distillation chain is distinctive: the final student
+uses a completely different input representation than the teacher, and
+distillation is performed in two sequential stages (sentence-level, then
+token-level) to bridge the representational gap progressively.
+
+\subsection{RetVec}
+
+\RetVec{}~\citep{sander2023retvec} is a compact multilingual text vectorizer
+trained via contrastive learning to produce similar embeddings for
+typographically related word variants (misspellings, emoji representations,
+Unicode lookalikes).  Originally developed for spam and content-moderation
+classification at Google, \RetVec{} outputs a 256-dimensional word vector in
+constant time regardless of word length.  To our knowledge, \LightRet{} is the
+first system to use \RetVec{} as the backbone for a sequence labeling (NER)
+task via structured knowledge distillation.
