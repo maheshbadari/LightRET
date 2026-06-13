@@ -45,22 +45,29 @@ def _load_conll2003(split: str):
         pathlib.Path("/kaggle/input/datasets/maheshbadari/lightret-source/lightret/conll2003_local/conll2003_local"),
         pathlib.Path("conll2003_local"),  # local dev
     ]
+    print(f"[conll2003] loading split='{split}'")
     for local_path in local_candidates:
-        if (local_path / split).exists():
-            return load_from_disk(str(local_path / split))
+        split_path = local_path / split
+        print(f"  trying local: {split_path} -> ", end="", flush=True)
+        if split_path.exists():
+            print("FOUND")
+            return load_from_disk(str(split_path))
+        else:
+            print("not found")
 
     # Strategy 2: direct parquet via hf:// URI (no script involved)
     base = "hf://datasets/conll2003/data"
+    parquet_url = f"{base}/{split}-00000-of-00001.parquet"
+    print(f"  trying parquet: {parquet_url} -> ", end="", flush=True)
     try:
-        return load_dataset(
-            "parquet",
-            data_files={split: f"{base}/{split}-00000-of-00001.parquet"},
-            split=split,
-        )
-    except Exception:
-        pass
+        ds = load_dataset("parquet", data_files={split: parquet_url}, split=split)
+        print("OK")
+        return ds
+    except Exception as e:
+        print(f"FAILED ({e})")
 
     # Strategy 3: dynamically discover parquet files in the repo
+    print("  trying dynamic parquet discovery -> ", end="", flush=True)
     try:
         from huggingface_hub import list_repo_files
         files = [
@@ -69,12 +76,26 @@ def _load_conll2003(split: str):
             if f.endswith(".parquet") and f"/{split}-" in f
         ]
         if files:
-            return load_dataset("parquet", data_files={split: files}, split=split)
-    except Exception:
-        pass
+            ds = load_dataset("parquet", data_files={split: files}, split=split)
+            print(f"OK ({len(files)} files)")
+            return ds
+        else:
+            print("no parquet files found")
+    except Exception as e:
+        print(f"FAILED ({e})")
 
     # Strategy 4: last resort (older datasets versions)
-    return load_dataset("conll2003", split=split, trust_remote_code=True)
+    print("  trying trust_remote_code -> ", end="", flush=True)
+    try:
+        ds = load_dataset("conll2003", split=split, trust_remote_code=True)
+        print("OK")
+        return ds
+    except Exception as e:
+        print(f"FAILED ({e})")
+        raise RuntimeError(
+            f"All strategies failed for CoNLL-2003 split='{split}'. "
+            "Upload conll2003_local/ as a Kaggle dataset and add it as input."
+        )
 
 import torch
 from torch.utils.data import Dataset
