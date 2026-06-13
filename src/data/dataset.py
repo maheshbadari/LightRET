@@ -42,6 +42,7 @@ def _load_conll2003(split: str):
     # Strategy 1: local pre-saved dataset (Kaggle dataset input)
     local_candidates = [
         pathlib.Path("/kaggle/input/conll2003-local/conll2003_local"),
+        pathlib.Path("/kaggle/input/datasets/maheshbadari/lightret-source/lightret/conll2003_local/conll2003_local"),
         pathlib.Path("conll2003_local"),  # local dev
     ]
     for local_path in local_candidates:
