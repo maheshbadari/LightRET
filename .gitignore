@@ -17,9 +17,13 @@ weights/
 *.pth
 *.ckpt
 
-# Local dataset cache
+# Local dataset cache  (zip is committed to git — small enough at ~1.7 MB)
 conll2003_local/
-conll2003_local.zip
+# conll2003_local.zip  <-- tracked in git
+
+# WikiText is too large for GitHub (~200 MB) — upload to Kaggle as wikitext-local
+wikitext_local/
+wikitext_local.zip
 
 # Datasets / HuggingFace cache
 ~/.cache/
