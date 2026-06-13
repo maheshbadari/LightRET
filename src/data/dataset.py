@@ -22,6 +22,41 @@ from typing import Any
 
 
 # ---------------------------------------------------------------------------
+# WikiText-103 loader  (local-first, falls back to HuggingFace download)
+# ---------------------------------------------------------------------------
+
+def _load_wikitext(split: str):
+    """
+    Load WikiText-103-raw-v1 from local disk first, then HuggingFace Hub.
+
+    On Kaggle: add wikitext-local as a dataset input, it mounts at
+    /kaggle/input/wikitext-local/wikitext_local/
+    Run save_wikitext_local.py locally to create the Arrow cache.
+    """
+    import pathlib
+    from datasets import load_from_disk, load_dataset
+
+    local_candidates = [
+        pathlib.Path("/kaggle/input/wikitext-local/wikitext_local"),
+        pathlib.Path("wikitext_local"),  # local dev
+    ]
+    print(f"[wikitext] loading split='{split}'")
+    for local_path in local_candidates:
+        split_path = local_path / split
+        print(f"  trying local: {split_path} -> ", end="", flush=True)
+        if split_path.exists():
+            print("FOUND")
+            return load_from_disk(str(split_path))
+        else:
+            print("not found")
+
+    print(f"  downloading from HuggingFace -> ", end="", flush=True)
+    ds = load_dataset("wikitext", "wikitext-103-raw-v1", split=split)
+    print("OK")
+    return ds
+
+
+# ---------------------------------------------------------------------------
 # CoNLL-2003 loader  (script-free, works with datasets >= 3.0)
 # ---------------------------------------------------------------------------
 
@@ -105,8 +140,6 @@ from src.config import (
     STAGE1_MAX_WORDS,
     STAGE2_MAX_WORDS,
     STAGE3_MAX_WORDS,
-    STAGE1_WIKITEXT_DATASET,
-    STAGE1_WIKITEXT_CONFIG,
     STAGE1_CONLL_DATASET,
     STAGE3_CONLL_DATASET,
     NOISE_P_SUB,
@@ -183,18 +216,12 @@ class PretrainDataset(Dataset):
         max_words: int = STAGE1_MAX_WORDS,
         verbose: bool = True,
     ) -> None:
-        from datasets import load_dataset  # imported here to keep top-level import light
-
         self.sentences: list[list[str]] = []
 
         # ---- WikiText-103 ----
         if verbose:
             print("Loading WikiText-103 ...")
-        wiki = load_dataset(
-            STAGE1_WIKITEXT_DATASET,
-            STAGE1_WIKITEXT_CONFIG,
-            split=split,
-        )
+        wiki = _load_wikitext(split)
         for item in wiki:
             self.sentences.extend(_sentences_from_wikitext(item["text"], max_words))
 
