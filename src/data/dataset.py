@@ -20,6 +20,50 @@ from __future__ import annotations
 import re
 from typing import Any
 
+
+# ---------------------------------------------------------------------------
+# CoNLL-2003 loader  (script-free, works with datasets >= 3.0)
+# ---------------------------------------------------------------------------
+
+def _load_conll2003(split: str):
+    """
+    Load CoNLL-2003 by reading parquet files directly from HuggingFace Hub.
+
+    datasets >= 3.0 refuses to run dataset scripts (conll2003.py), even for
+    third-party mirrors. Loading via the built-in 'parquet' loader bypasses
+    the script-detection path entirely.
+
+    Falls back through three strategies so this works in any environment.
+    """
+    from datasets import load_dataset
+
+    # Strategy 1: direct parquet via hf:// URI (works on datasets >= 2.x, no script)
+    base = "hf://datasets/conll2003/data"
+    try:
+        return load_dataset(
+            "parquet",
+            data_files={split: f"{base}/{split}-00000-of-00001.parquet"},
+            split=split,
+        )
+    except Exception:
+        pass
+
+    # Strategy 2: dynamically discover parquet files in the repo
+    try:
+        from huggingface_hub import list_repo_files
+        files = [
+            f"hf://datasets/conll2003/{f}"
+            for f in list_repo_files("conll2003", repo_type="dataset")
+            if f.endswith(".parquet") and f"/{split}-" in f
+        ]
+        if files:
+            return load_dataset("parquet", data_files={split: files}, split=split)
+    except Exception:
+        pass
+
+    # Strategy 3: last resort — named dataset (works on older datasets versions)
+    return load_dataset("conll2003", split=split, trust_remote_code=True)
+
 import torch
 from torch.utils.data import Dataset
 
@@ -128,10 +172,7 @@ class PretrainDataset(Dataset):
         if verbose:
             print("Loading CoNLL-2003 ...")
         conll_split = "train" if split == "train" else "validation"
-        conll = load_dataset(
-            STAGE1_CONLL_DATASET,
-            split=conll_split,
-        )
+        conll = _load_conll2003(conll_split)
         n_before = len(self.sentences)
         for item in conll:
             words = item["tokens"]
@@ -184,10 +225,7 @@ class NERDataset(Dataset):
         self.max_words       = max_words
         self.apply_noise_aug = apply_noise_aug
 
-        dataset = load_dataset(
-            STAGE3_CONLL_DATASET,
-            split=split,
-        )
+        dataset = _load_conll2003(split)
 
         # ner_tags may be int (ClassLabel) or str depending on the dataset source
         from src.config import NER_LABEL2ID
