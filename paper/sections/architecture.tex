@@ -20,10 +20,7 @@ $256$-dimensional vector through a three-layer feed-forward network:
   \bigr),
   \label{eq:retvec}
 \end{equation}
-where $\phi(w) \in \RR^{d_{\text{in}}}$ is a fixed character-hash projection.
-All weights $\{\bW_1, \bW_2, \bW_3, \bb_1, \bb_2, \bb_3\}$ are pretrained
-and \textbf{frozen throughout all three stages}.
-The output lies in $[-1, 1]^{256}$ (bounded by $\tanh$).
+\noindent where $\phi(w) \in \RR^{384}$ is the fixed character-hash binarisation of word $w$ (16 characters $\times$ 24 bits per character); $\bW_1 \in \RR^{256 \times 384}$, $\bW_2, \bW_3 \in \RR^{256 \times 256}$ are weight matrices; $\bb_1, \bb_2, \bb_3 \in \RR^{256}$ are bias vectors. All weights are pretrained and \textbf{frozen throughout all three stages}. The output lies in $[-1, 1]^{256}$ due to the final $\tanh$ activation.
 
 \subsection{Pre-LayerNorm Transformer Block}
 
@@ -36,8 +33,7 @@ during distillation than post-LayerNorm:
   \bx'' &= \bx' + \text{FFN}\!\left(\text{LN}(\bx')\right),
   \label{eq:pre_ln_ffn}
 \end{align}
-where $\text{MHA}$ denotes multi-head self-attention and
-$\text{FFN}(\bv) = \bW_2\,\text{GELU}(\bW_1\bv + \bb_1) + \bb_2$.
+\noindent where $\bx$ is the block's input vector; $\text{LN}(\cdot)$ is layer normalisation; $\text{MHA}(\cdot)$ is multi-head self-attention (Eq.~\ref{eq:mha}); $\bx'$ is the intermediate output after the attention sub-layer; and $\text{FFN}(\bv) = \bW_2\,\text{GELU}(\bW_1\bv + \bb_1) + \bb_2$ is the position-wise feed-forward network with $\bW_1 \in \RR^{4d \times d}$, $\bW_2 \in \RR^{d \times 4d}$, and $d$ the hidden dimension of the block.
 
 Multi-head attention with $H$ heads and head dimension $d_k = d / H$:
 \begin{equation}
@@ -55,6 +51,7 @@ Multi-head attention with $H$ heads and head dimension $d_k = d / H$:
   \bV\bW^V_h.
   \label{eq:attention}
 \end{equation}
+\noindent where $\bQ$, $\bK$, $\bV$ are the query, key, and value matrices derived from the input sequence; $\bW^Q_h, \bW^K_h, \bW^V_h \in \RR^{d \times d_k}$ are per-head projection matrices; $d_k = d / H$ is the per-head dimension; $H$ is the total number of attention heads; $\bW^O \in \RR^{d \times d}$ is the output projection applied after concatenation; and $\text{softmax}(\cdot)$ is applied row-wise to produce attention weights.
 
 \subsection{Model Comparison}
 

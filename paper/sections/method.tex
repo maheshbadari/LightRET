@@ -33,6 +33,7 @@ Its sentence representation is the mean of the final-layer hidden states:
   \;\in\; \RR^{768}.
   \label{eq:bert_sent}
 \end{equation}
+\noindent where $\bz^{B} \in \RR^{768}$ is the BERT sentence vector, $|\bw|$ is the number of input tokens, and $\bh^{B}_{i}$ is the $i$-th final-layer hidden state of BERT-base.
 
 \paragraph{Student: \RetBERT{}.}
 \RetBERT{} replaces BERT's WordPiece embedding lookup with a frozen
@@ -44,7 +45,7 @@ Its sentence representation is the mean of the final-layer hidden states:
   \quad \bW_{p} \in \RR^{768 \times 256},
   \label{eq:retbert_input}
 \end{equation}
-where $\text{PE}(i)$ is the fixed sinusoidal positional encoding
+\noindent where $\bh^{(0)}_{i}$ is the initial hidden state for word $i$, $\bW_{p} \in \RR^{768 \times 256}$ is a trainable linear projection matrix, $\RetVec(w_i) \in \RR^{256}$ is the frozen character-level embedding of word $w_i$, and $\text{PE}(i)$ is the fixed sinusoidal positional encoding
 of~\citet{vaswani2017attention}.
 The student then applies $L_{RB}=12$ standard pre-LayerNorm Transformer
 encoder layers~\citep{xiong2020layer}:
@@ -56,12 +57,15 @@ encoder layers~\citep{xiong2020layer}:
   \quad \ell = 1, \ldots, 12.
   \label{eq:retbert_layers}
 \end{equation}
+\noindent where $\bh^{(\ell)}_{i}$ is the hidden state at Transformer layer $\ell$ for word $i$, $d{=}768$ is the hidden dimension, $H{=}12$ is the number of attention heads, and layers are stacked for $\ell = 1, \ldots, 12$.
+
 Its sentence representation is:
 \begin{equation}
   \bz^{RB} \;=\; \frac{1}{n}\sum_{i=1}^{n} \bh^{(12)}_{i}
   \;\in\; \RR^{768}.
   \label{eq:retbert_sent}
 \end{equation}
+\noindent where $\bz^{RB} \in \RR^{768}$ is the RetBERT sentence vector obtained by mean-pooling the final Transformer layer's hidden states over $n$ words.
 
 \paragraph{Loss.}
 We minimise the cosine distance between teacher and student sentence vectors:
@@ -73,6 +77,8 @@ We minimise the cosine distance between teacher and student sentence vectors:
   \;\in\; [0,\, 2].
   \label{eq:loss1}
 \end{equation}
+\noindent where $\cdot$ denotes the dot product, $\|\cdot\|$ the $\ell_2$ norm, $\bz^{B}$ and $\bz^{RB}$ are the teacher and student sentence vectors respectively. A value of $0$ indicates identical directions; $2$ indicates opposite directions.
+
 Optimising $\calL_1$ directly encourages \RetBERT{} to produce
 BERT-compatible sentence representations from character-level inputs, without
 requiring intermediate layer matching.
@@ -103,7 +109,7 @@ $d=256$-dimensional space:
                     \quad \ell = 1,\ldots,4,
   \label{eq:lr_transformer}
 \end{align}
-where $\bh^{(0)} \coloneqq \bg$.
+where $\be_i \in \RR^{256}$ is the frozen RetVec embedding of word $w_i$; $\overrightarrow{\text{GRU}}_{128}$ and $\overleftarrow{\text{GRU}}_{128}$ are forward and backward GRU units with 128 hidden units each; $[\,;\,]$ denotes vector concatenation; $\bg_i \in \RR^{256}$ is the BiGRU output; $\bh^{(\ell)}_i$ is the hidden state after the $\ell$-th Transformer layer ($d{=}256$, $H{=}4$ heads); and $\bh^{(0)} \coloneqq \bg$.
 
 For Stage~2 only, a temporary linear projector aligns the student's
 output dimension to the teacher's:
@@ -112,7 +118,7 @@ output dimension to the teacher's:
   \quad \bW_{\text{proj}} \in \RR^{768 \times 256}.
   \label{eq:lr_proj}
 \end{equation}
-This projector is \emph{discarded} before Stage~3.
+\noindent where $\bp_i \in \RR^{768}$ is the projected student token representation aligned to the teacher's 768-d space; $\bW_{\text{proj}} \in \RR^{768 \times 256}$ and $\bb_{\text{proj}} \in \RR^{768}$ are temporary projection weights that are \emph{discarded} before Stage~3.
 
 \paragraph{Loss.}
 Token-level cosine distillation with sequence-length masking:
@@ -126,6 +132,8 @@ Token-level cosine distillation with sequence-length masking:
   \right).
   \label{eq:loss2}
 \end{equation}
+\noindent where $\bh^{RB}_{i} \in \RR^{768}$ is the frozen RetBERT teacher's hidden state at token position $i$, $\bp_{i} \in \RR^{768}$ is the projected student representation (Eq.~\ref{eq:lr_proj}), and $n$ is the number of tokens in the sentence.
+
 By supervising every token position, Stage~2 teaches \LightRet{} the
 \emph{contextual} structure of \RetBERT{}'s hidden space, not just sentence
 summaries.
@@ -148,8 +156,7 @@ After Stage~2, the projector is removed and a BiLSTM NER head is attached:
   \quad \bW_{c} \in \RR^{|\calY| \times 256}.
   \label{eq:ner_logits}
 \end{align}
-where $\bH = \{\bh^{(4)}_i\}_{i=1}^{m}$ is the backbone output for
-\emph{noisy} input words.
+where $\bH = \{\bh^{(4)}_i\}_{i=1}^{m}$ is the LightRet backbone output sequence for \emph{noisy} input words; $\bs_i \in \RR^{256}$ is the BiLSTM output at position $i$ formed by concatenating 128-unit forward and backward LSTM states; $\bW_{c} \in \RR^{|\calY| \times 256}$ and $\bb_{c} \in \RR^{|\calY|}$ are the linear classifier weight and bias; and $|\calY|{=}9$ is the number of BIO entity labels.
 
 \subsubsection{Noise Augmentation}
 
@@ -182,9 +189,7 @@ in the $k$-th group.  Labels are projected as follows:
 \end{dcases}
 \label{eq:label_proj}
 \end{equation}
-where the continuation function $\sigma : \calY \to \calY$ maps
-\texttt{B-X} $\mapsto$ \texttt{I-X} and is the identity on all other labels.
-This ensures BIO validity is preserved after word splitting.
+\noindent where $\tilde{y}_j$ is the projected BIO label assigned to noisy word $j$; $C_k \subseteq \{1,\ldots,n\}$ and $N_k \subseteq \{1,\ldots,m\}$ are the sets of clean and noisy word indices belonging to alignment group $k$; $y_{C_k[0]}$ is the original label of the first clean word in the group; and the continuation function $\sigma : \calY \to \calY$ maps \texttt{B-X} $\mapsto$ \texttt{I-X} and is the identity on all other labels, ensuring BIO validity is preserved after word splitting.
 
 \subsubsection{Stage 3 Loss}
 
@@ -202,6 +207,7 @@ the student's representation of group $N_k$:
   \bh^{S}_{(k)} \;=\; \frac{1}{|N_k|}\sum_{j \in N_k} \bh^{S}_{j}.
   \label{eq:align_pool}
 \end{equation}
+\noindent where $\bh^{T}_{(k)} \in \RR^{256}$ and $\bh^{S}_{(k)} \in \RR^{256}$ are the mean-pooled teacher and student hidden representations for alignment group $k$; $\bh^{T}_{i}$ and $\bh^{S}_{j}$ are the per-token hidden states of the teacher (clean input) and student (noisy input) respectively.
 
 The distillation and classification losses are:
 \begin{align}
@@ -216,7 +222,8 @@ The distillation and classification losses are:
      \log \hat{p}_{j,c},
   \label{eq:loss_class}
 \end{align}
-where $\hat{p}_{j,c} = \text{softmax}(\text{logits}_j)_c$.
+\noindent where $K$ is the total number of alignment groups; $\calL_{\text{distill}}$ is the alignment-aware cosine distillation loss; $m$ is the number of noisy words; $\tilde{y}_j$ is the projected label for noisy word $j$ (Eq.~\ref{eq:label_proj}); $\mathbf{1}[\cdot]$ is the indicator function; and $\hat{p}_{j,c} = \text{softmax}(\text{logits}_j)_c$ is the predicted probability for BIO label $c$ at position $j$.
+
 The combined Stage~3 loss is:
 \begin{equation}
   \calL_{3} \;=\; \beta\,\calL_{\text{class}}
@@ -224,3 +231,4 @@ The combined Stage~3 loss is:
   \quad \beta = 0.5.
   \label{eq:loss3}
 \end{equation}
+\noindent where $\beta \in [0,1]$ is a scalar interpolation coefficient balancing the classification signal ($\calL_{\text{class}}$) and the teacher-alignment signal ($\calL_{\text{distill}}$). We set $\beta{=}0.5$ in all experiments, confirmed via a validation sweep (Section~\ref{sec:analysis}).

@@ -421,6 +421,10 @@ def build():
         "a label yᵢ ∈ 𝒴 from a BIO tag set:"))
     story.append(eq(
         "𝒴 = {O, B-PER, I-PER, B-ORG, I-ORG, B-LOC, I-LOC, B-MISC, I-MISC},  |𝒴| = 9"))
+    story.append(para(
+        "<b>where</b> O = non-entity token; B-X = beginning of entity type X; "
+        "I-X = continuation of entity type X; types are PER, ORG, LOC, MISC; "
+        "|𝒴| = 9 is the total tag-set size."))
     story.append(sssec("Noisy NER."))
     story.append(para(
         "A stochastic character-level perturbation operator 𝒩 : w → w̃ "
@@ -433,6 +437,10 @@ def build():
     ]:
         story.append(eq(f"{lbl}  {form}"))
     story.append(para(
+        "<b>where</b> c is the original character; visually-similar(c) is a predefined set of "
+        "typographically close characters (e.g. '0' for 'O', '1' for 'l'); c′ is a randomly "
+        "sampled character; k is the character position; and p_sub, p_ins, p_del, p_space ∈ [0,1] "
+        "are independent per-character perturbation probabilities. "
         "Because 𝒩_space can split one word into two, the noisy word count "
         "m may differ from n, requiring dynamic label projection (§4.3.3)."))
 
@@ -449,16 +457,34 @@ def build():
     story.append(sssec("Teacher (BERT-base, frozen)."))
     story.append(para("Sentence vector via mean-pooling of final hidden states:"))
     story.append(eq("z_B = (1/n) Σᵢ h_i^B   ∈ ℝ⁷⁶⁸", "1"))
+    story.append(para(
+        "<b>where</b> z_B ∈ ℝ⁷⁶⁸ is the BERT sentence vector; n is the number of input tokens; "
+        "h_i^B is the i-th final-layer hidden state of BERT-base (frozen)."))
     story.append(sssec("Student: RetBERT."))
     story.append(para(
         "RetBERT replaces BERT's embedding lookup with a frozen RetVec "
         "embedder plus a linear projection:"))
     story.append(eq("h_i^(0) = W_p · RetVec(wᵢ) + PE(i),   W_p ∈ ℝ^(768×256)", "2"))
+    story.append(para(
+        "<b>where</b> h_i^(0) is the initial hidden state for word i; "
+        "W_p ∈ ℝ^(768×256) is a trainable linear projection; "
+        "RetVec(wᵢ) ∈ ℝ²⁵⁶ is the frozen character embedding of word wᵢ; "
+        "PE(i) is the fixed sinusoidal positional encoding at position i."))
     story.append(para("Then applies 12 pre-LayerNorm Transformer layers (d=768, H=12):"))
     story.append(eq("h_i^(ℓ) = TransformerLayer_{d=768,H=12}(h^(ℓ-1))_i,   ℓ=1,…,12", "3"))
+    story.append(para(
+        "<b>where</b> h_i^(ℓ) is the hidden state at layer ℓ for word i; "
+        "d=768 is the hidden dimension; H=12 is the number of attention heads."))
     story.append(eq("z_RB = (1/n) Σᵢ h_i^(12)   ∈ ℝ⁷⁶⁸", "4"))
+    story.append(para(
+        "<b>where</b> z_RB ∈ ℝ⁷⁶⁸ is the RetBERT sentence vector obtained "
+        "by mean-pooling the 12th-layer hidden states over n words."))
     story.append(sssec("Stage 1 Loss."))
     story.append(eq("ℒ₁ = 1 − (z_B · z_RB) / (‖z_B‖ · ‖z_RB‖)   ∈ [0, 2]", "5"))
+    story.append(para(
+        "<b>where</b> · denotes the dot product; ‖·‖ is the ℓ₂ norm; "
+        "z_B and z_RB are the teacher and student sentence vectors. "
+        "Value 0 = identical directions; 2 = opposite directions."))
 
     # Stage 2
     story.append(ssec("4.3", "Stage 2: Token-Level Compression"))
@@ -468,16 +494,33 @@ def build():
     story.append(eq("eᵢ = RetVec(wᵢ)   ∈ ℝ²⁵⁶", "6"))
     story.append(eq("gᵢ = [ GRU→_128(e_{1:n})_i  ;  GRU←_128(e_{1:n})_i ]   ∈ ℝ²⁵⁶", "7"))
     story.append(eq("h_i^(ℓ) = TransformerLayer_{d=256,H=4}(h^(ℓ-1))_i,   ℓ=1,…,4", "8"))
+    story.append(para(
+        "<b>where</b> eᵢ ∈ ℝ²⁵⁶ is the frozen RetVec embedding of word wᵢ; "
+        "GRU→_128 / GRU←_128 = forward/backward GRUs with 128 hidden units; "
+        "[;] = concatenation; gᵢ ∈ ℝ²⁵⁶ = BiGRU output; "
+        "h_i^(ℓ) = hidden state after Transformer layer ℓ (d=256, H=4 heads); h^(0) := g."))
     story.append(para("A temporary projector aligns to teacher dimension (discarded after Stage 2):"))
     story.append(eq("pᵢ = W_proj · h_i^(4) + b_proj,   W_proj ∈ ℝ^(768×256)", "9"))
+    story.append(para(
+        "<b>where</b> pᵢ ∈ ℝ⁷⁶⁸ is the projected student token representation; "
+        "W_proj ∈ ℝ^(768×256) and b_proj ∈ ℝ⁷⁶⁸ are temporary weights discarded after Stage 2."))
     story.append(sssec("Stage 2 Loss."))
     story.append(eq("ℒ₂ = (1/n) Σᵢ (1 − cos(h_i^RB, pᵢ))", "10"))
+    story.append(para(
+        "<b>where</b> h_i^RB ∈ ℝ⁷⁶⁸ is the frozen RetBERT teacher's hidden state at "
+        "position i; pᵢ ∈ ℝ⁷⁶⁸ is the projected student representation (Eq. 9); "
+        "n is the number of tokens."))
 
     # Stage 3
     story.append(ssec("4.4", "Stage 3: Noisy-Student NER Fine-Tuning"))
     story.append(sssec("BiLSTM NER Head."))
     story.append(eq("sᵢ = [ LSTM→_128(H)_i  ;  LSTM←_128(H)_i ]   ∈ ℝ²⁵⁶", "11"))
     story.append(eq("logitsᵢ = W_c · sᵢ + b_c,   W_c ∈ ℝ^(|𝒴|×256)", "12"))
+    story.append(para(
+        "<b>where</b> H = {h_i^(4)} is the LightRet backbone output for noisy input; "
+        "sᵢ ∈ ℝ²⁵⁶ = BiLSTM output (128-unit forward + backward LSTM concatenated); "
+        "W_c ∈ ℝ^(|𝒴|×256) and b_c ∈ ℝ^|𝒴| = classifier weight and bias; "
+        "|𝒴| = 9 = number of BIO entity labels."))
     story.append(sssec("Dynamic BIO Label Projection."))
     story.append(para(
         "A character-level shift log records each edit as (k, δ, τ). "
@@ -486,14 +529,29 @@ def build():
     story.append(eq("ỹ_j = y_{C_k[0]}                          [1:1 or merge]", "13a"))
     story.append(eq("ỹ_{N_k[0]} = y_{C_k[0]},  ỹ_j = σ(y_{C_k[0]})  [split: j∈N_k\\{N_k[0]}]", "13b"))
     story.append(para(
-        "where σ : B-X ↦ I-X is the continuation function, preserving "
-        "BIO validity after word splitting."))
+        "<b>where</b> ỹ_j = projected BIO label for noisy word j; "
+        "C_k ⊆ {1,…,n} = clean word indices in alignment group k; "
+        "N_k ⊆ {1,…,m} = noisy word indices in group k; "
+        "y_{C_k[0]} = original label of the first clean word in the group; "
+        "σ : B-X ↦ I-X is the continuation function (identity on all other labels), "
+        "preserving BIO validity after word splitting."))
     story.append(sssec("Alignment-Aware Distillation."))
     story.append(eq("h^T_(k) = (1/|C_k|) Σ_{i∈C_k} h_i^T,    h^S_(k) = (1/|N_k|) Σ_{j∈N_k} h_j^S", "14"))
+    story.append(para(
+        "<b>where</b> h^T_(k) ∈ ℝ²⁵⁶ and h^S_(k) ∈ ℝ²⁵⁶ are mean-pooled teacher and "
+        "student representations for group k; h_i^T = teacher hidden state at clean position i; "
+        "h_j^S = student hidden state at noisy position j."))
     story.append(eq("ℒ_distill = (1/K) Σ_k (1 − cos(h^T_(k), h^S_(k)))", "15"))
     story.append(eq("ℒ_class = −(1/m) Σ_j Σ_c 1[ỹ_j=c] log p̂_{j,c}", "16"))
+    story.append(para(
+        "<b>where</b> K = number of alignment groups; m = number of noisy words; "
+        "ỹ_j = projected label (Eq. 13a–b); 1[·] = indicator function; "
+        "p̂_{j,c} = softmax(logits_j)_c = predicted probability for label c at position j."))
     story.append(sssec("Stage 3 Combined Loss."))
     story.append(eq("ℒ₃ = β · ℒ_class + (1−β) · ℒ_distill,   β = 0.5", "17"))
+    story.append(para(
+        "<b>where</b> β ∈ [0,1] balances classification (ℒ_class) and "
+        "teacher-alignment (ℒ_distill) signals. Set to β=0.5 in all experiments."))
 
     # ════════════════════════════════════════════════════════════════════
     # 5. ARCHITECTURE
@@ -507,16 +565,30 @@ def build():
     story.append(eq("x′  = x + MHA(LN(x))", "18"))
     story.append(eq("x″ = x′ + FFN(LN(x′))", "19"))
     story.append(eq("FFN(v) = W₂ GELU(W₁v + b₁) + b₂", "20"))
+    story.append(para(
+        "<b>where</b> x = block input; LN(·) = layer normalisation; "
+        "MHA(·) = multi-head self-attention; x′ = intermediate output after attention; "
+        "FFN = position-wise feed-forward network with W₁ ∈ ℝ^(4d×d), W₂ ∈ ℝ^(d×4d), "
+        "b₁, b₂ ∈ ℝ^(4d) / ℝ^d; d = hidden dimension of the block."))
     story.append(para("Multi-head attention with H heads, head dim d_k = d/H:"))
     story.append(eq("Attention(Q,K,V) = softmax(QKᵀ / √d_k) · V", "21"))
     story.append(eq("MHA(Q,K,V) = Concat(head₁,…,head_H) W^O", "22"))
+    story.append(para(
+        "<b>where</b> Q, K, V = query, key, value matrices; "
+        "W^Q_h, W^K_h, W^V_h ∈ ℝ^(d×d_k) = per-head projections; "
+        "d_k = d/H = head dimension; H = number of attention heads; "
+        "W^O ∈ ℝ^(d×d) = output projection; softmax applied row-wise."))
 
     story.append(ssec("5.2", "RetVec Embedder"))
     story.append(para(
         "RetVec maps any Unicode word w to 256-d via a 3-layer MLP "
         "(GELU→GELU→tanh), all weights frozen:"))
     story.append(eq("RetVec(w) = tanh(W₃ GELU(W₂ GELU(W₁φ(w)+b₁)+b₂)+b₃)", "23"))
-    story.append(para("Output lies in [−1,1]²⁵⁶. No vocabulary lookup required."))
+    story.append(para(
+        "<b>where</b> φ(w) ∈ ℝ³⁸⁴ = fixed character-hash binarisation of w "
+        "(16 characters × 24 bits); W₁ ∈ ℝ^(256×384), W₂, W₃ ∈ ℝ^(256×256) = weight matrices; "
+        "b₁, b₂, b₃ ∈ ℝ²⁵⁶ = bias vectors; all pretrained and frozen. "
+        "Output lies in [−1,1]²⁵⁶ (bounded by tanh). No vocabulary lookup required."))
 
     story.append(ssec("5.3", "Model Comparison"))
     story.append(make_table(

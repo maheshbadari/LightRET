@@ -19,6 +19,7 @@ RETVEC_WEIGHTS  = ROOT / "retvec_v1_weights.npz"
 STAGE1_CKPT     = WEIGHTS_DIR / "retbert_stage1.pt"
 STAGE2_CKPT     = WEIGHTS_DIR / "lightret_stage2.pt"
 STAGE3_CKPT     = WEIGHTS_DIR / "lightret_stage3.pt"
+NER_HEAD_CKPT   = WEIGHTS_DIR / "ner_head_stage3.pt"
 
 # ---------------------------------------------------------------------------
 # Device  — auto-selects GPU on Kaggle, CPU locally

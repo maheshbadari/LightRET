@@ -31,6 +31,7 @@ from src.config import (
     DEVICE,
     STAGE2_CKPT,
     STAGE3_CKPT,
+    NER_HEAD_CKPT,
     STAGE3_EPOCHS,
     STAGE3_BATCH_SIZE,
     STAGE3_LR,
@@ -216,9 +217,9 @@ def train() -> None:
 
         if val_loss < best_val_loss:
             best_val_loss = val_loss
-            # Save LightRet backbone (NER head can be saved separately if needed)
-            torch.save(student.state_dict(), STAGE3_CKPT)
-            print(f"  Saved checkpoint: {STAGE3_CKPT}")
+            torch.save(student.state_dict(),   STAGE3_CKPT)
+            torch.save(ner_head.state_dict(),  NER_HEAD_CKPT)
+            print(f"  Saved: {STAGE3_CKPT}  |  {NER_HEAD_CKPT}")
 
     print(f"\nStage 3 complete. Best val CE: {best_val_loss:.4f}")
     print(f"Final checkpoint: {STAGE3_CKPT}")

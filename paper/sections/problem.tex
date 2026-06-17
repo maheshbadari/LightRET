@@ -17,6 +17,8 @@ word a label $y_i \in \calY$ from a BIO tag set:
   \bigr\},
   \quad |\calY| = 9.
 \]
+\noindent where \texttt{O} denotes a non-entity token; \texttt{B-X} marks the \emph{beginning} of an entity of type X; \texttt{I-X} marks a \emph{continuation} token inside an entity of type X; and entity types are PER (person), ORG (organisation), LOC (location), and MISC (miscellaneous). The total tag set size is $|\calY|{=}9$.
+
 The goal is to learn $f_\theta : \bw \mapsto (y_1,\ldots,y_n)$ that maximises
 entity-level F1 on the CoNLL-2003 test set.
 
@@ -35,7 +37,7 @@ general.  Four perturbation types are supported:
   \calN_{\text{space}} &: \text{insert space at position } k \text{ within word}
                         \quad \text{with prob.}\ p_{\text{space}}. \label{eq:nspace}
 \end{align}
-The composite operator applies all four perturbations independently per
+\noindent where $c$ is the original character at position $k$; $\text{visually-similar}(c)$ is a predefined set of characters typographically close to $c$ (e.g.\ `0' for `O', `1' for `l'); $c'$ is a randomly sampled character; and $p_{\text{sub}}, p_{\text{ins}}, p_{\text{del}}, p_{\text{space}} \in [0,1]$ are the per-character perturbation probabilities applied independently. The composite operator applies all four perturbations independently per
 character in sequence.  Because $\calN_{\text{space}}$ can split one word into
 two, the noisy word count $m$ may differ from $n$, requiring \emph{label
 projection} (Section~\ref{subsec:label_proj}).
