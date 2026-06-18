@@ -262,9 +262,12 @@ def evaluate_noise_operators(
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--backbone", default=str(STAGE3_CKPT))
-    parser.add_argument("--head",     default=str(NER_HEAD_CKPT))
-    parser.add_argument("--seeds",    type=int, default=5)
+    parser.add_argument("--backbone",       default=str(STAGE3_CKPT))
+    parser.add_argument("--head",           default=str(NER_HEAD_CKPT))
+    parser.add_argument("--seeds",          type=int,   default=5)
+    parser.add_argument("--bert-medium-f1", type=float, default=None,
+                        help="BERT-base F1 at medium noise from evaluate_baselines.py "
+                             "(for apples-to-apples gap in abstract)")
     args = parser.parse_args()
 
     print(f"Device : {DEVICE}")
@@ -340,15 +343,23 @@ def main():
 
     # ------------------------------------------------------------------ #
     # 5. Abstract numbers reminder
+    #    Note: run evaluate_baselines.py first to get BERT medium noise F1,
+    #    then pass it via --bert-medium-f1 for an apples-to-apples gap.
     # ------------------------------------------------------------------ #
     clean_f1  = results["clean"]["overall"]
     medium_f1 = results["medium"]["overall"]
-    bert_f1   = 92.14   # known from literature
+
     print("\n" + "=" * 66)
     print("Abstract fill-in (copy these into abstract.tex):")
-    print(f"  Clean F1              : {clean_f1:.1f}")
-    print(f"  10% noise (medium) F1 : {medium_f1:.1f}")
-    print(f"  Gap vs BERT-base      : +{medium_f1 - bert_f1:.1f} F1")
+    print(f"  LightRet clean F1              : {clean_f1:.1f}")
+    print(f"  LightRet medium noise F1       : {medium_f1:.1f}")
+    if args.bert_medium_f1 is not None:
+        gap = medium_f1 - args.bert_medium_f1
+        print(f"  BERT-base medium noise F1      : {args.bert_medium_f1:.1f}")
+        print(f"  Gap vs BERT-base (medium noise): {gap:+.1f} F1")
+    else:
+        print("  (Run evaluate_baselines.py to get BERT medium noise F1,")
+        print("   then re-run: python evaluate.py --bert-medium-f1 <value>)")
     print("=" * 66)
     print("\nDone.")
 
