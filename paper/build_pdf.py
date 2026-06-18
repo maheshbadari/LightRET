@@ -149,8 +149,8 @@ def make_pipeline():
 
     # ── Stage 1 stack ─────────────────────────────────────────────────────
     box(c1x, ys[0], bw, bh, "BERT-base", "(frozen)", fill=frozen)
-    box(c1x, ys[1], bw, bh, "Linear 256→768", "", fill=train)
-    box(c1x, ys[2], bw, bh, "12× Transformer", "d=768, H=12", fill=train)
+    box(c1x, ys[1], bw, bh, "12× Transformer", "d=768, H=12", fill=train)
+    box(c1x, ys[2], bw, bh, "Linear 256→768", "", fill=train)
     box(c1x, ys[3], bw, bh, "RetVec", "(frozen)", fill=frozen)
     arr(c1x+bw/2, ys[3]+bh, c1x+bw/2, ys[2])
     arr(c1x+bw/2, ys[2]+bh, c1x+bw/2, ys[1])
@@ -186,10 +186,11 @@ def make_pipeline():
     arr(c3x+bw/2, ys[3]+bh, c3x+bw/2, ys[2])
     arr(c3x+bw/2, ys[2]+bh, c3x+bw/2, ys[1])
     lx3 = c3x+bw+8; ly3 = ys[1]+2
-    box(lx3, ly3, 40, 30, "L₃", "cls+distill", fill=colors.HexColor("#e8f5e9"),
+    box(lx3, ly3, 40, 42, "L₃", "cls+distill", fill=colors.HexColor("#e8f5e9"),
         stroke=colors.HexColor("#388e3c"), tsize=9)
-    darr(c3x+bw, ys[0]+bh/2, lx3, ly3+30)
-    darr(c3x+bw, ys[1]+bh/2, lx3, ly3+15)
+    darr(c3x+bw, ys[0]+bh/2, lx3, ly3+42)   # teacher backbone → loss (L_distill)
+    darr(c3x+bw, ys[2]+bh/2, lx3, ly3+26)   # student backbone (Transformer) → loss (L_distill)
+    darr(c3x+bw, ys[1]+bh/2, lx3, ly3+10)   # NER head → loss (L_class)
 
     # noisy / clean labels
     d.add(String(c3x+bw/2-12, ys[4]-10, "noisy input w̃",
