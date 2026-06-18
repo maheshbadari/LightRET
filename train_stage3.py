@@ -20,6 +20,7 @@ Checkpoints:
     weights/lightret_stage3.pt  — LightRet backbone state dict
 """
 
+import argparse
 import math
 import torch
 import torch.nn as nn
@@ -105,10 +106,11 @@ def make_scheduler(optimizer, warmup_steps: int, total_steps: int) -> LambdaLR:
 # Training loop
 # ---------------------------------------------------------------------------
 
-def train() -> None:
+def train(epochs: int = STAGE3_EPOCHS, resume: bool = False) -> None:
     WEIGHTS_DIR.mkdir(parents=True, exist_ok=True)
 
     print(f"Device: {DEVICE}")
+    print(f"Epochs: {epochs}  |  Resume: {resume}")
 
     # ---- Teacher: LightRet from Stage 2 checkpoint, frozen ----
     print(f"Loading LightRet teacher from {STAGE2_CKPT} ...")
@@ -122,9 +124,19 @@ def train() -> None:
     for p in teacher.parameters():
         p.requires_grad_(False)
 
-    # ---- Student: same architecture as teacher, fresh copy + NER head ----
-    print("Building LightRet student + NER head ...")
-    student  = LightRet.from_stage2_checkpoint(str(STAGE2_CKPT)).to(DEVICE)
+    # ---- Student: resume from Stage 3 checkpoint or start from Stage 2 ----
+    if resume and STAGE3_CKPT.exists():
+        print(f"Resuming student from {STAGE3_CKPT} ...")
+        student = LightRet.for_stage3()
+        student.load_state_dict(
+            torch.load(STAGE3_CKPT, map_location="cpu", weights_only=True)
+        )
+        student.to(DEVICE)
+    else:
+        print("Building student from Stage 2 checkpoint ...")
+        student = LightRet.from_stage2_checkpoint(str(STAGE2_CKPT)).to(DEVICE)
+
+    print("Building NER head ...")
     ner_head = NERHead().to(DEVICE)
 
     # RetVec is frozen (inside LightRet.__init__ already), trainable = BiGRU + Transformer + NERHead
@@ -157,12 +169,12 @@ def train() -> None:
     )
 
     optimizer   = AdamW(trainable, lr=STAGE3_LR, weight_decay=0.01)
-    total_steps = STAGE3_EPOCHS * len(train_loader)
+    total_steps = epochs * len(train_loader)
     scheduler   = make_scheduler(optimizer, STAGE3_WARMUP_STEPS, total_steps)
 
     best_val_loss = float("inf")
 
-    for epoch in range(1, STAGE3_EPOCHS + 1):
+    for epoch in range(1, epochs + 1):
         student.train()
         ner_head.train()
         epoch_loss = epoch_lc = epoch_ld = 0.0
@@ -226,4 +238,10 @@ def train() -> None:
 
 
 if __name__ == "__main__":
-    train()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--epochs", type=int, default=STAGE3_EPOCHS,
+                        help="Number of training epochs (default: STAGE3_EPOCHS from config)")
+    parser.add_argument("--resume", action="store_true",
+                        help="Resume student from weights/lightret_stage3.pt instead of Stage 2")
+    args = parser.parse_args()
+    train(epochs=args.epochs, resume=args.resume)
