@@ -32,8 +32,7 @@ PAGE_W, PAGE_H = A4          # 595.27 x 841.89 pt
 ML = MR = 1.8*cm             # left/right margin
 MT = 2.2*cm                  # top margin
 MB = 2.0*cm                  # bottom margin
-COL_GAP = 0.5*cm
-COL_W = (PAGE_W - ML - MR - COL_GAP) / 2   # ~8.6 cm each
+COL_W = PAGE_W - ML - MR   # single full-width column
 
 # ── Colour palette ──────────────────────────────────────────────────────────
 C_TITLE   = colors.HexColor("#1a3a5c")
@@ -108,7 +107,7 @@ def hr():    return HRFlowable(width="100%", thickness=0.6,
 
 # ── Pipeline diagram (Drawing) ───────────────────────────────────────────────
 def make_pipeline():
-    W, H = COL_W*2 + COL_GAP, 5.8*cm
+    W, H = COL_W, 5.8*cm
     d = Drawing(W, H)
 
     def box(x, y, w, h, label, sub="", fill=colors.HexColor("#d6e8f7"),
@@ -217,7 +216,7 @@ def make_pipeline():
 # ── Table helper ─────────────────────────────────────────────────────────────
 def make_table(header, rows, col_widths, caption, num,
                full_width=False, fontsize=7):
-    w = (COL_W*2+COL_GAP) if full_width else COL_W
+    w = COL_W
     if col_widths is None:
         col_widths = [w/len(header)]*len(header)
     data = [header] + rows
@@ -252,19 +251,15 @@ def build():
         author="Lakshmi Harika Badari",
     )
 
-    # ── Title page frame (full width) ───────────────────────────────────
-    title_frame = Frame(ML, PAGE_H - MT - 5.5*cm, PAGE_W-ML-MR, 5.5*cm,
+    # ── Title/abstract frame (full width, top of first page) ────────────
+    title_frame = Frame(ML, PAGE_H - MT - 5.5*cm, COL_W, 5.5*cm,
                         id='title', showBoundary=0)
-    # ── Two-column body frames ───────────────────────────────────────────
-    col1 = Frame(ML, MB, COL_W, PAGE_H-MT-MB-5.6*cm,
-                 id='col1', showBoundary=0)
-    col2 = Frame(ML+COL_W+COL_GAP, MB, COL_W, PAGE_H-MT-MB-5.6*cm,
-                 id='col2', showBoundary=0)
-    # Two-column frames for continuation pages
-    col1b = Frame(ML, MB, COL_W, PAGE_H-MT-MB,
-                  id='col1b', showBoundary=0)
-    col2b = Frame(ML+COL_W+COL_GAP, MB, COL_W, PAGE_H-MT-MB,
-                  id='col2b', showBoundary=0)
+    # ── Body frame: rest of first page ──────────────────────────────────
+    body1 = Frame(ML, MB, COL_W, PAGE_H-MT-MB-5.6*cm,
+                  id='body1', showBoundary=0)
+    # ── Body frame: continuation pages (full height) ─────────────────────
+    body = Frame(ML, MB, COL_W, PAGE_H-MT-MB,
+                 id='body', showBoundary=0)
 
     def first_page(canvas, doc):
         canvas.saveState()
@@ -291,9 +286,9 @@ def build():
         canvas.restoreState()
 
     doc.addPageTemplates([
-        PageTemplate(id='First', frames=[title_frame, col1, col2],
+        PageTemplate(id='First', frames=[title_frame, body1],
                      onPage=first_page),
-        PageTemplate(id='Later', frames=[col1b, col2b],
+        PageTemplate(id='Later', frames=[body],
                      onPage=later_pages),
     ])
 
@@ -556,9 +551,6 @@ def build():
     # ════════════════════════════════════════════════════════════════════
     # 5. ARCHITECTURE
     # ════════════════════════════════════════════════════════════════════
-    story.append(NextPageTemplate('Later'))
-    story.append(FrameBreak())  # go to col2, then page break at end
-
     story.append(sec("5", "Architecture"))
     story.append(ssec("5.1", "Pre-LayerNorm Transformer Block"))
     story.append(para("All Transformer layers use pre-LayerNorm for training stability:"))
