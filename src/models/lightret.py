@@ -34,7 +34,6 @@ from src.config import (
     LIGHTRET_FFN_DIM,
     LIGHTRET_DROPOUT,
     LIGHTRET_PROJ_DIM,
-    STAGE2_MAX_WORDS,
 )
 from src.models.retvec_embedder import RetVecEmbedder
 
@@ -99,7 +98,7 @@ class LightRet(nn.Module):
 
         self.pos_enc = _SinusoidalPositionalEncoding(
             d_model=LIGHTRET_DIM,
-            max_len=STAGE2_MAX_WORDS + 2,
+            max_len=512,
             dropout=LIGHTRET_DROPOUT,
         )
 
@@ -209,7 +208,8 @@ class LightRet(nn.Module):
         The projector weights are simply discarded — they are not needed further.
         """
         state = torch.load(ckpt_path, map_location="cpu", weights_only=True)
+        state.pop("pos_enc.pe", None)   # pe is deterministic; don't overwrite the 512-slot buffer
         model = cls(with_projector=True)
-        model.load_state_dict(state)
+        model.load_state_dict(state, strict=False)
         model.drop_projector()
         return model
