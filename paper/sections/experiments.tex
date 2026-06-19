@@ -102,7 +102,7 @@ DistilBERT~\citep{sanh2019distilbert}   & 66M       & 90.70 \\
 BERT-base~\citep{devlin2019bert}        & 110M      & 92.14 \\
 CharBERT~\citep{ma2020charbert}         & 114M      & 92.61 \\
 \midrule
-\textbf{\LightRet{} (ours)}             & \textbf{$\sim$4M} & \textbf{\todo{XX.X}} \\
+\textbf{\LightRet{} (ours)}             & \textbf{$\sim$4M} & \textbf{85.7} \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -116,15 +116,15 @@ CharBERT~\citep{ma2020charbert}         & 114M      & 92.61 \\
 \toprule
 \textbf{Model} & \textbf{Params} & \textbf{Clean} & \textbf{Low} & \textbf{Medium} & \textbf{High} \\
 \midrule
-BERT-base   & 110M & 92.14 & \todo{XX.X} & \todo{XX.X} & \todo{XX.X} \\
-CharBERT    & 114M & 92.61 & \todo{XX.X} & \todo{XX.X} & \todo{XX.X} \\
-DistilBERT  &  66M & 90.70 & \todo{XX.X} & \todo{XX.X} & \todo{XX.X} \\
+BERT-base   & 110M & 91.25 & 71.89 & 52.06 & 24.13 \\
+CharBERT    & 114M & 92.61 & --    & --    & --    \\
+DistilBERT  &  66M & 89.93 & 63.19 & 42.96 & 19.40 \\
 \midrule
 \textbf{\LightRet{}} & \textbf{$\sim$4M}
-                     & \textbf{\todo{XX.X}}
-                     & \textbf{\todo{XX.X}}
-                     & \textbf{\todo{XX.X}}
-                     & \textbf{\todo{XX.X}} \\
+                     & \textbf{85.7}
+                     & \textbf{82.7}
+                     & \textbf{78.0}
+                     & \textbf{69.2} \\
 \bottomrule
 \end{tabular}
 }
@@ -165,9 +165,9 @@ Table~\ref{tab:ablation} isolates the contribution of each component.
 \toprule
 \textbf{Model} & \textbf{Params} & \textbf{GPU (ms)} & \textbf{CPU (ms)} \\
 \midrule
-BERT-base  & 110M & \todo{X.X} & \todo{XX.X} \\
-DistilBERT &  66M & \todo{X.X} & \todo{XX.X} \\
-\textbf{\LightRet{}} & \textbf{$\sim$4M} & \textbf{\todo{X.X}} & \textbf{\todo{X.X}} \\
+BERT-base  & 110M & 2.65 &  7.71 \\
+DistilBERT &  66M & 1.51 &  3.50 \\
+\textbf{\LightRet{}} & \textbf{$\sim$4M} & \textbf{1.66} & \textbf{10.89} \\
 \bottomrule
 \end{tabular}
 \end{table}

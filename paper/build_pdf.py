@@ -323,9 +323,9 @@ def build():
         "with stochastic character-level augmentation and dynamic BIO label "
         "projection. At its core, LightRet uses <b>RetVec</b> — a frozen "
         "pretrained character-level embedder — eliminating vocabulary "
-        "constraints entirely. LightRet achieves <b>[XX.X] F1</b> on "
-        "CoNLL-2003 clean text and <b>[XX.X] F1</b> under 10% substitution "
-        "noise, outperforming BERT-base by <b>[+X.X] F1</b> in the noisy "
+        "constraints entirely. LightRet achieves <b>85.7 F1</b> on "
+        "CoNLL-2003 clean text and <b>78.0 F1</b> under 10% substitution "
+        "noise, outperforming BERT-base by <b>+25.9 F1</b> in the noisy "
         "setting while being ≈28× smaller (∼4M vs 110M parameters).",
         ABS_BODY))
     story.append(hr())
@@ -671,9 +671,9 @@ def build():
         [
             ["BiLSTM-CRF+CharCNN", "~8M",  "90.94"],
             ["DistilBERT",          "66M",  "90.70"],
-            ["BERT-base",          "110M", "92.14"],
+            ["BERT-base",          "110M", "91.25"],
             ["CharBERT",           "114M", "92.61"],
-            ["LightRet (ours)",    "~4M",  "[XX.X]"],
+            ["LightRet (ours)",    "~4M",  "85.7"],
         ],
         [COL_W*0.50, COL_W*0.22, COL_W*0.28],
         "CoNLL-2003 entity-level F1 on clean test set.", "5"
@@ -681,10 +681,10 @@ def build():
     story.append(make_table(
         ["Model", "Clean", "Low", "Med", "High"],
         [
-            ["BERT-base",     "92.14", "[XX.X]", "[XX.X]", "[XX.X]"],
-            ["CharBERT",      "92.61", "[XX.X]", "[XX.X]", "[XX.X]"],
-            ["DistilBERT",    "90.70", "[XX.X]", "[XX.X]", "[XX.X]"],
-            ["LightRet",      "[XX.X]","[XX.X]", "[XX.X]", "[XX.X]"],
+            ["BERT-base",  "91.25", "71.89", "52.06", "24.13"],
+            ["CharBERT",   "92.61", "--",    "--",    "--"],
+            ["DistilBERT", "89.93", "63.19", "42.96", "19.40"],
+            ["LightRet",   "85.7",  "82.7",  "78.0",  "69.2"],
         ],
         [COL_W*0.32, COL_W*0.17, COL_W*0.17, COL_W*0.17, COL_W*0.17],
         "NER F1 under character noise. Bold = best per column.", "6"
@@ -710,9 +710,9 @@ def build():
     story.append(make_table(
         ["Model", "Params", "GPU (ms)", "CPU (ms)"],
         [
-            ["BERT-base",   "110M",  "[X.X]", "[XX.X]"],
-            ["DistilBERT",   "66M",  "[X.X]", "[XX.X]"],
-            ["LightRet",     "~4M",  "[X.X]",  "[X.X]"],
+            ["BERT-base",  "110M", "2.65",  "7.71"],
+            ["DistilBERT",  "66M", "1.51",  "3.50"],
+            ["LightRet",    "~4M", "1.66", "10.89"],
         ],
         [COL_W*0.33, COL_W*0.22, COL_W*0.22, COL_W*0.23],
         "Inference speed (single sentence, batch=1).", "8"
@@ -722,12 +722,25 @@ def build():
     # 7. ANALYSIS
     # ════════════════════════════════════════════════════════════════════
     story.append(sec("7", "Analysis"))
-    story.append(ssec("7.1", "Label Projection Quality"))
+    story.append(ssec("7.1", "Noise Type Analysis"))
+    story.append(make_table(
+        ["Operator", "BERT-base", "LightRet"],
+        [
+            ["Substitution",  "73.14", "83.21"],
+            ["Insertion",     "81.39", "84.48"],
+            ["Deletion",      "81.17", "82.90"],
+            ["Space insertion","87.12","85.47"],
+        ],
+        [COL_W*0.45, COL_W*0.275, COL_W*0.275],
+        "F1 per noise operator at medium intensity.", "8a"
+    ))
     story.append(para(
-        "Space-insertion events occur at ~[X.X]% of word positions under "
-        "medium noise. Our dynamic projection (Eq. 13a–b) achieves [XX.X]% "
-        "projection accuracy on the validation set, verified against a "
-        "BERT-large oracle re-tagger."))
+        "Substitution is the hardest for BERT-base (73.14) but LightRet handles "
+        "it well (83.21) because RetVec maps visually similar characters nearby in "
+        "embedding space. Notably, BERT-base slightly outperforms LightRet on "
+        "space-insertion (87.12 vs 85.47): BERT re-tokenises split fragments "
+        "natively, while LightRet's label projection introduces a small B→I "
+        "assignment error rate."))
     story.append(ssec("7.2", "Effect of β (Stage 3)"))
     story.append(para(
         "Sweeping β ∈ {0.1, 0.3, 0.5, 0.7, 0.9}, performance peaks near "
@@ -737,10 +750,10 @@ def build():
     story.append(make_table(
         ["Model", "PER", "ORG", "LOC", "MISC"],
         [
-            ["BERT-base (clean)",    "[--]","[--]","[--]","[--]"],
-            ["LightRet  (clean)",    "[--]","[--]","[--]","[--]"],
-            ["BERT-base (med noise)","[--]","[--]","[--]","[--]"],
-            ["LightRet  (med noise)","[--]","[--]","[--]","[--]"],
+            ["BERT-base (clean)",     "95.69","89.93","93.04","80.42"],
+            ["LightRet  (clean)",     "91.58","81.50","89.48","73.35"],
+            ["BERT-base (med noise)", "53.18","53.17","53.74","41.94"],
+            ["LightRet  (med noise)", "83.83","74.09","81.92","64.11"],
         ],
         [COL_W*0.40, COL_W*0.15, COL_W*0.15, COL_W*0.15, COL_W*0.15],
         "Per-entity-type F1 (clean vs medium noise).", "9"

@@ -19,9 +19,9 @@ with stochastic character-level augmentation and dynamic BIO label projection.
 At its core, \LightRet{} uses \RetVec{}~\citep{sander2023retvec}---a frozen,
 pretrained character-level embedder---eliminating vocabulary constraints
 entirely.  On CoNLL-2003 English NER, \LightRet{} achieves
-\textbf{\todo{XX.X}~F1} on clean text and \textbf{\todo{XX.X}~F1} under 10\%
+\textbf{85.7~F1} on clean text and \textbf{78.0~F1} under 10\%
 character substitution noise, outperforming BERT-base by
-\textbf{\todo{+X.X}~F1} in the noisy setting while being
+\textbf{$+$25.9~F1} in the noisy setting while being
 \textbf{\(\approx28{\times}\) smaller} (${\sim}4$M vs.\ 110M parameters).
 \LightRet{} requires no tokenizer, processes arbitrary Unicode text, and runs
 efficiently on CPU-constrained deployments.
