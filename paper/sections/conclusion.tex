@@ -17,9 +17,17 @@ noisy-student NER fine-tuning with dynamic BIO label projection---transfers
 BERT's contextual knowledge progressively into a model with
 ${\sim}4$M parameters, roughly $28{\times}$ smaller than BERT-base.
 
-Our experiments on CoNLL-2003 demonstrate that \LightRet{} achieves
-competitive clean-text F1 while substantially outperforming BERT-base and
-CharBERT in all noisy evaluation conditions.  The dynamic label projection
+Our experiments on CoNLL-2003 reveal a clear trade-off that favours
+\LightRet{} in real-world deployments: while BERT-base and DistilBERT
+achieve strong clean-text F1 (91.25 and 89.93 respectively), they degrade
+catastrophically under character noise---dropping to 52.1 and 43.0 F1 at
+medium noise and below 25 F1 at high noise.
+\LightRet{}, though modestly lower on clean text (85.7 F1), retains 78.0 F1
+at medium noise and 69.2 F1 at high noise, striking the right balance
+between clean-text competitiveness and noise robustness that neither
+BERT-scale nor distilled subword models can match.
+\LightRet{} thus substantially outperforms BERT-base and DistilBERT across
+all noisy evaluation conditions.  The dynamic label projection
 algorithm correctly handles word-splitting noise while preserving BIO validity,
 and the compound distillation--classification loss in Stage~3 proves critical:
 neither the classification signal nor the teacher alignment alone achieves

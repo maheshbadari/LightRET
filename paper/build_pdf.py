@@ -803,6 +803,16 @@ def build():
         "roughly 28× smaller than BERT-base, while achieving competitive "
         "clean-text F1 and superior noise robustness across all perturbation types."))
     story.append(para(
+        "Our results reveal a clear trade-off that favours LightRet in "
+        "real-world deployments: while BERT-base and DistilBERT achieve strong "
+        "clean-text F1 (91.25 and 89.93), they degrade catastrophically under "
+        "character noise — dropping to 52.1 and 43.0 F1 at medium noise and "
+        "below 25 F1 at high noise. LightRet, though modestly lower on clean "
+        "text (85.7 F1), retains 78.0 F1 at medium noise and 69.2 F1 at high "
+        "noise, striking the right balance between clean-text competitiveness "
+        "and noise robustness that neither BERT-scale nor distilled subword "
+        "models can match."))
+    story.append(para(
         "The ablation studies confirm that all three stages contribute: "
         "skipping Stage 1 hurts Stage 2 convergence, skipping Stage 2 leaves "
         "the backbone under-trained, and the compound ℒ_class + ℒ_distill loss "
