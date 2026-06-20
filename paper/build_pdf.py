@@ -694,13 +694,13 @@ def build():
     story.append(make_table(
         ["Configuration", "Clean", "Medium"],
         [
-            ["LightRet (full, 3-stage)",        "[XX.X]", "[XX.X]"],
-            ["w/o Stage 1 (skip RetBERT)",       "[XX.X]", "[XX.X]"],
-            ["w/o Stage 2 (direct NER finetune)","[XX.X]", "[XX.X]"],
-            ["w/o noise augmentation",           "[XX.X]", "[XX.X]"],
-            ["ℒ₃ = ℒ_class only (β=1)",         "[XX.X]", "[XX.X]"],
-            ["ℒ₃ = ℒ_distill only (β=0)",        "[XX.X]", "[XX.X]"],
-            ["Random char embeddings",            "[XX.X]", "[XX.X]"],
+            ["LightRet (full, 3-stage)",        "85.7", "78.0"],
+            ["w/o Stage 1 (skip RetBERT)",       "—",    "—"],
+            ["w/o Stage 2 (direct NER finetune)","71.6", "65.4"],
+            ["w/o noise augmentation",           "85.8", "62.3"],
+            ["ℒ₃ = ℒ_class only (β=1)",         "84.6", "74.2"],
+            ["ℒ₃ = ℒ_distill only (β=0)",        "2.5",  "2.9"],
+            ["Random char embeddings",            "5.2",  "5.2"],
         ],
         [COL_W*0.60, COL_W*0.20, COL_W*0.20],
         "Ablation on CoNLL-2003 F1.", "7"
