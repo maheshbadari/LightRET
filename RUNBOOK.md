@@ -105,18 +105,28 @@ python train_stage2.py
 ### Step 3: Stage 3 — Noisy-student NER fine-tuning  (LightRet + NER head)
 
 **Prerequisite:** `weights/lightret_stage2.pt`
-**Duration:** ~10 epochs, ~2–3 h on a single GPU
+**Duration:** ~20 epochs, ~4–6 h on a single GPU
 
 ```bash
-python train_stage3.py
+python train_stage3.py --epochs 20
+```
+
+**Resume from an existing Stage 3 checkpoint** (e.g. after adding more epochs):
+```bash
+python train_stage3.py --epochs 20 --resume
 ```
 
 **Outputs:**
-- `weights/lightret_stage3.pt`  — LightRet backbone
-- `weights/ner_head_stage3.pt`  — BiLSTM NER head
+- `weights/lightret_stage3.pt`  — LightRet backbone (saved on best val CE)
+- `weights/ner_head_stage3.pt`  — BiLSTM NER head  (saved on best val CE)
 
-**What to expect:** Validation cross-entropy falls below 0.1; entity F1 on
-clean CoNLL-2003 test should be in the high 80s–low 90s.
+**What to expect:** Val CE should fall to ~0.05–0.07 by epoch 15–20.
+Observed: Stage 1 loss 0.0419, Stage 2 loss 0.1184, Stage 3 val CE 0.0504.
+
+**Recovery — if only backbone was saved (head missing):**
+```bash
+python train_ner_head_only.py   # trains NER head alone with frozen backbone
+```
 
 ---
 
@@ -158,7 +168,9 @@ python evaluate.py --backbone weights/lightret_stage3.pt \
 Evaluates `dslim/bert-base-NER` and `elastic/distilbert-base-uncased-finetuned-conll03-english`
 at the same noise conditions. Fills baseline rows in **Table 6, Table 8, Table 9**.
 
-> Downloads ~440 MB (BERT-base) + ~260 MB (DistilBERT) on first run.
+> If downloading manually, each model needs: `config.json`, `pytorch_model.bin`,
+> `tokenizer_config.json`, `vocab.txt`, `special_tokens_map.json`.
+> Point to the local folder via the `hf_id` field in `BASELINE_MODELS`.
 
 ```bash
 python evaluate_baselines.py
@@ -169,6 +181,11 @@ Optional flags:
 python evaluate_baselines.py --models bert          # bert only
 python evaluate_baselines.py --models distilbert    # distilbert only
 python evaluate_baselines.py --seeds 3              # faster, fewer seeds
+```
+
+**After getting BERT medium noise F1, pass it to evaluate.py for the correct gap:**
+```bash
+python evaluate.py --bert-medium-f1 <value>
 ```
 
 ---
@@ -200,7 +217,7 @@ removed. Run after Phase 1 is complete (needs `weights/lightret_stage2.pt`).
 
 ### Step 7a: Train each ablation variant
 
-Run one command per variant (can be parallelised on separate GPUs):
+**Variants 1–5** — run directly (all need `weights/lightret_stage2.pt`):
 
 ```bash
 python ablation_train.py --variant no_noise
@@ -208,7 +225,17 @@ python ablation_train.py --variant beta1
 python ablation_train.py --variant beta0
 python ablation_train.py --variant random_emb
 python ablation_train.py --variant no_stage2
-python ablation_train.py --variant no_stage1   # needs weights/lightret_stage2_no_stage1.pt
+```
+
+**Variant 6 — `no_stage1`** requires an extra Stage 2 run first:
+
+```bash
+# Step A: Stage 2 with BERT as direct teacher (skips RetBERT)
+python train_stage2_no_stage1.py
+# Output: weights/lightret_stage2_no_stage1.pt
+
+# Step B: Stage 3 NER fine-tune using that backbone
+python ablation_train.py --variant no_stage1
 ```
 
 **Variants explained:**
@@ -216,14 +243,11 @@ python ablation_train.py --variant no_stage1   # needs weights/lightret_stage2_n
 | Variant | What is removed | Purpose |
 |---------|----------------|---------|
 | `no_noise` | Character noise augmentation | Tests noise robustness contribution |
-| `beta1` | Distillation loss (β=1, classification only) | Tests knowledge distillation contribution |
+| `beta1` | Distillation loss (β=1, classification only) | Tests distillation contribution |
 | `beta0` | Classification loss (β=0, distillation only) | Tests NER supervision contribution |
 | `random_emb` | Pretrained RetVec weights (randomised) | Tests RetVec pretraining contribution |
 | `no_stage2` | Stage 2 (fresh backbone, NER fine-tune only) | Tests Stage 2 contribution |
 | `no_stage1` | Stage 1 (BERT used directly as Stage 2 teacher) | Tests Stage 1 contribution |
-
-> `no_stage1` requires running Stage 2 with BERT as the direct teacher and
-> saving to `weights/lightret_stage2_no_stage1.pt` before this step.
 
 **Outputs per variant:**
 - `weights/abl_<variant>.pt`
@@ -257,6 +281,7 @@ available variants without completing all.
 | `retvec_v1_weights.npz` | `retvec_export.py` | All stages (frozen inside LightRet) |
 | `weights/retbert_stage1.pt` | `train_stage1.py` | `train_stage2.py` |
 | `weights/lightret_stage2.pt` | `train_stage2.py` | `train_stage3.py`, `ablation_train.py` |
+| `weights/lightret_stage2_no_stage1.pt` | `train_stage2_no_stage1.py` | `ablation_train.py --variant no_stage1` |
 | `weights/lightret_stage3.pt` | `train_stage3.py` | `evaluate.py`, `ablation_eval.py` |
 | `weights/ner_head_stage3.pt` | `train_stage3.py` | `evaluate.py`, `ablation_eval.py` |
 | `weights/abl_<variant>.pt` | `ablation_train.py` | `ablation_eval.py` |
@@ -288,18 +313,31 @@ python retvec_export.py
 # Training
 python train_stage1.py
 python train_stage2.py
-python train_stage3.py
+python train_stage3.py --epochs 20
+
+# If Stage 3 needs more epochs (resume from existing checkpoint)
+python train_stage3.py --epochs 20 --resume
+
+# If NER head checkpoint is missing after Stage 3
+python train_ner_head_only.py
 
 # Evaluation
 python evaluate.py
 python evaluate_baselines.py
+python evaluate.py --bert-medium-f1 <value from above>
 python label_proj_eval.py
 
-# Ablation
+# Ablation (variants 1–5)
 python ablation_train.py --variant no_noise
 python ablation_train.py --variant beta1
 python ablation_train.py --variant beta0
 python ablation_train.py --variant random_emb
 python ablation_train.py --variant no_stage2
+
+# Ablation variant 6 (no_stage1) — extra Stage 2 run required
+python train_stage2_no_stage1.py
+python ablation_train.py --variant no_stage1
+
+# Evaluate all ablation variants
 python ablation_eval.py
 ```
