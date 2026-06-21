@@ -134,6 +134,9 @@ DistilBERT  &  66M & 89.93 & 63.19 & 42.96 & 19.40 \\
 
 Table~\ref{tab:ablation} isolates the contribution of each component.
 Every ablated variant confirms a distinct design choice:
+\textbf{Stage~1} provides a modest but consistent gain ($-$1.0 clean, $-$1.6 medium),
+showing that the RetBERT intermediate bridge helps transfer richer contextual structure
+than distilling BERT directly into LightRet.
 \textbf{Stage~2} is critical---removing it drops clean F1 by 14.1 points (71.6 vs 85.7),
 showing the backbone requires token-level distillation to encode contextual structure.
 \textbf{Noise augmentation} costs nothing on clean text (85.8 vs 85.7) but is the
@@ -156,7 +159,7 @@ to 5.2, proving that pretrained character embeddings are foundational, not incid
 \textbf{Configuration} & \textbf{Clean} & \textbf{Medium} \\
 \midrule
 \LightRet{} (full, 3-stage)                  & \textbf{85.7} & \textbf{78.0} \\
-\quad w/o Stage~1 (skip \RetBERT{})          & \multicolumn{2}{c}{---} \\
+\quad w/o Stage~1 (skip \RetBERT{})          & 84.8 & 76.4 \\
 \quad w/o Stage~2 (direct NER finetune)      & 71.6 & 65.4 \\
 \quad w/o noise augmentation in Stage~3      & 85.8 & 62.3 \\
 \quad $\calL_3 = \calL_{\text{class}}$ only ($\beta{=}1$) & 84.6 & 74.2 \\

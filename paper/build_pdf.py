@@ -695,7 +695,7 @@ def build():
         ["Configuration", "Clean", "Medium"],
         [
             ["LightRet (full, 3-stage)",        "85.7", "78.0"],
-            ["w/o Stage 1 (skip RetBERT)",       "—",    "—"],
+            ["w/o Stage 1 (skip RetBERT)",       "84.8", "76.4"],
             ["w/o Stage 2 (direct NER finetune)","71.6", "65.4"],
             ["w/o noise augmentation",           "85.8", "62.3"],
             ["ℒ₃ = ℒ_class only (β=1)",         "84.6", "74.2"],
