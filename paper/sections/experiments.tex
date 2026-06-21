@@ -133,12 +133,31 @@ DistilBERT  &  66M & 89.93 & 63.19 & 42.96 & 19.40 \\
 \subsection{Ablation Study}
 
 Table~\ref{tab:ablation} isolates the contribution of each component.
-Every ablated variant confirms a distinct design choice:
-\textbf{Stage~1} provides a modest but consistent gain ($-$1.0 clean, $-$1.6 medium),
-showing that the RetBERT intermediate bridge helps transfer richer contextual structure
-than distilling BERT directly into LightRet.
-\textbf{Stage~2} is critical---removing it drops clean F1 by 14.1 points (71.6 vs 85.7),
-showing the backbone requires token-level distillation to encode contextual structure.
+
+\paragraph{Stage 2 is the most critical component.}
+Removing Stage~2 causes the largest single degradation in the entire ablation:
+$-14.1$ F1 on clean text and $-12.6$ F1 under medium noise (71.6 vs 85.7).
+Without Stage~2, \LightRet{} is initialised randomly and fine-tuned directly
+on the CoNLL-2003 NER labels---only ${\sim}15{,}000$ training sentences.
+Although \RetVec{} alone provides some signal (71.6 F1, well above random),
+the BiGRU--Transformer backbone cannot learn contextual word representations
+from NER supervision alone; it requires the large-scale distillation corpus
+(WikiText-103 $+$ CoNLL-2003, ${\sim}$millions of sentences) that Stage~2 provides.
+The symmetric drop across clean and noisy conditions confirms that Stage~2 builds
+the foundational backbone representations, not merely noise robustness.
+
+\paragraph{Stage 1 disproportionately benefits noise robustness.}
+Replacing Stage~1 with a direct BERT teacher (subword $\to$ word pooling) yields
+a smaller but notable gap: $-$0.9 F1 on clean and $-$1.6 F1 under medium noise
+(84.8 vs 85.7 and 76.4 vs 78.0).
+The \emph{asymmetry} is informative: Stage~1 improves noisy performance nearly
+twice as much as clean performance.
+\RetBERT{} processes text at word level---the same granularity as \LightRet{}---so
+Stage~2 becomes a clean word-to-word distillation.
+Without Stage~1, BERT's subword hidden states must be mean-pooled to word level
+before computing the cosine loss, introducing an aggregation mismatch that weakens
+the distillation signal and particularly degrades the noise-robust representations
+the student would otherwise inherit.
 \textbf{Noise augmentation} costs nothing on clean text (85.8 vs 85.7) but is the
 sole source of noise robustness---without it, medium-noise F1 collapses by 15.7 points.
 Using \textbf{classification loss only} ($\beta{=}1$) degrades both clean ($-1.1$) and
