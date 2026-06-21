@@ -1,0 +1,64 @@
+% ============================================================
+%  Appendix A — Additional Results
+% ============================================================
+\appendix
+
+\section{$\beta$ Sensitivity in Stage 3}
+\label{app:beta}
+
+Table~\ref{tab:beta} reports entity-level F1 on the CoNLL-2003 test set for
+three values of $\beta$ in the Stage~3 compound loss
+$\calL_3 = \beta\,\calL_{\text{class}} + (1{-}\beta)\,\calL_{\text{distill}}$.
+
+\begin{table}[h]
+\centering
+\caption{Effect of $\beta$ on CoNLL-2003 F1.}
+\label{tab:beta}
+\begin{tabular}{ccc}
+\toprule
+$\beta$ & \textbf{Clean F1} & \textbf{Medium noise F1} \\
+\midrule
+0.0 (distill only) & 2.5  & 2.9  \\
+0.5 (equal)        & \textbf{85.7} & \textbf{78.0} \\
+1.0 (class only)   & 84.6 & 74.2 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+$\beta{=}0$ (pure distillation) leads to near-random predictions: the model
+learns to mimic teacher representations but receives no signal for label
+assignment. $\beta{=}1$ (pure classification) performs well on clean text
+but degrades under noise relative to $\beta{=}0.5$, indicating that teacher
+alignment provides a regularisation effect that improves noise robustness
+beyond what label supervision alone achieves. We fix $\beta{=}0.5$ for all
+experiments.
+
+\section{Training Convergence}
+\label{app:convergence}
+
+Table~\ref{tab:convergence} summarises the final training losses observed
+across all three distillation stages.
+
+\begin{table}[h]
+\centering
+\caption{Training convergence across stages.}
+\label{tab:convergence}
+\begin{tabular}{llr}
+\toprule
+\textbf{Stage} & \textbf{Loss type} & \textbf{Final loss} \\
+\midrule
+Stage 1 (BERT $\to$ RetBERT)      & Cosine distance & 0.0419 \\
+Stage 2 (RetBERT $\to$ LightRet)  & Cosine distance & 0.1184 \\
+Stage 3 (NER fine-tuning)         & Val cross-entropy & 0.0504 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Stage~1 achieves cosine similarity of $1 - 0.0419 = 0.958$ between BERT and
+RetBERT sentence vectors, confirming that the character-level student closely
+matches the subword teacher at the sentence level.
+Stage~2 loss of 0.1184 reflects the inherent information loss from compressing
+768-dimensional RetBERT representations into 256 dimensions across only 4
+Transformer layers (vs.\ 12).
+Stage~3 val cross-entropy of 0.0504 corresponds to strong NER performance,
+consistent with the 85.7 clean F1 reported in Table~\ref{tab:clean}.

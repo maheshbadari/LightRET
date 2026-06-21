@@ -121,7 +121,13 @@ NER sequence labeling.
 
 \subsection{$\beta$ Sensitivity in Stage 3}
 
-We sweep $\beta \in \{0.1, 0.3, 0.5, 0.7, 0.9\}$ on the validation set.
-Performance peaks near $\beta{=}0.5$, confirming that both the classification
-signal and the teacher alignment are important; dominance by either alone
-reduces performance.  Detailed results are in Appendix~A.
+The ablation study (Table~\ref{tab:ablation}) evaluates three boundary values
+of $\beta$: $\beta{=}0$ (distillation only), $\beta{=}0.5$ (equal weighting),
+and $\beta{=}1$ (classification only).
+$\beta{=}0$ collapses to near-random F1 (2.5), confirming that NER label
+supervision is non-negotiable.
+$\beta{=}1$ performs reasonably (84.6 clean, 74.2 medium) but lags behind
+$\beta{=}0.5$ (85.7 clean, 78.0 medium), showing that the teacher alignment
+signal provides consistent regularisation beyond label supervision alone.
+The compound loss at $\beta{=}0.5$ achieves the best balance and is used
+in all main experiments.

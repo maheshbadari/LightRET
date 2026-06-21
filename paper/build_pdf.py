@@ -51,43 +51,43 @@ def style(name, parent="Normal", **kw):
     s = ParagraphStyle(name, parent=SS[parent], **kw)
     return s
 
-TITLE_S = style("Title_S", fontName="Helvetica-Bold", fontSize=15,
+TITLE_S = style("Title_S", fontName="Times-Bold", fontSize=15,
                 leading=19, textColor=C_TITLE, spaceAfter=4, alignment=TA_CENTER)
-AUTH_S  = style("Auth_S",  fontName="Helvetica",      fontSize=9,
+AUTH_S  = style("Auth_S",  fontName="Times-Roman", fontSize=9,
                 leading=12, textColor=colors.HexColor("#333333"), alignment=TA_CENTER)
-AFF_S   = style("Aff_S",   fontName="Helvetica-Oblique", fontSize=8,
-                leading=11, textColor=colors.grey,     alignment=TA_CENTER, spaceAfter=6)
-EMAIL_S = style("Email_S", fontName="Courier",        fontSize=7.5,
-                leading=10, textColor=C_RULE,          alignment=TA_CENTER, spaceAfter=10)
+AFF_S   = style("Aff_S",   fontName="Times-Italic", fontSize=8,
+                leading=11, textColor=colors.grey,   alignment=TA_CENTER, spaceAfter=6)
+EMAIL_S = style("Email_S", fontName="Courier",      fontSize=7.5,
+                leading=10, textColor=C_RULE,        alignment=TA_CENTER, spaceAfter=10)
 
-ABS_HEAD = style("AH", fontName="Helvetica-Bold", fontSize=8,
+ABS_HEAD = style("AH", fontName="Times-Bold", fontSize=8,
                  leading=11, textColor=C_HEAD, spaceAfter=2)
-ABS_BODY = style("AB", fontName="Helvetica", fontSize=8,
+ABS_BODY = style("AB", fontName="Times-Roman", fontSize=8,
                  leading=11, textColor=colors.black, alignment=TA_JUSTIFY,
                  spaceAfter=8, leftIndent=6, rightIndent=6)
 
-SEC_S  = style("Sec",  fontName="Helvetica-Bold", fontSize=9.5,
+SEC_S  = style("Sec",  fontName="Times-Bold", fontSize=9.5,
                leading=13, textColor=C_HEAD, spaceBefore=8, spaceAfter=3)
-SSEC_S = style("SSec", fontName="Helvetica-Bold", fontSize=8.5,
+SSEC_S = style("SSec", fontName="Times-Bold", fontSize=8.5,
                leading=12, textColor=C_HEAD, spaceBefore=5, spaceAfter=2)
-SSSEC_S= style("SSSec",fontName="Helvetica-BoldOblique", fontSize=8,
+SSSEC_S= style("SSSec",fontName="Times-BoldItalic", fontSize=8,
                leading=11, textColor=C_HEAD, spaceBefore=4, spaceAfter=1)
-BODY_S = style("Body", fontName="Helvetica", fontSize=8,
+BODY_S = style("Body", fontName="Times-Roman", fontSize=8,
                leading=11.5, textColor=colors.black, alignment=TA_JUSTIFY,
                spaceAfter=4)
-BULL_S = style("Bull", parent="Normal", fontName="Helvetica", fontSize=8,
+BULL_S = style("Bull", parent="Normal", fontName="Times-Roman", fontSize=8,
                leading=11.5, textColor=colors.black, alignment=TA_JUSTIFY,
                leftIndent=10, bulletIndent=4, spaceAfter=2)
-EQ_S   = style("Eq",   fontName="Helvetica-Oblique", fontSize=7.5,
+EQ_S   = style("Eq",   fontName="Times-Italic", fontSize=7.5,
                leading=11, textColor=colors.HexColor("#1a1a6e"),
                alignment=TA_CENTER, spaceBefore=3, spaceAfter=3,
                backColor=C_EQ_BG, leftIndent=4, rightIndent=4)
-CAP_S  = style("Cap",  fontName="Helvetica-Oblique", fontSize=7,
+CAP_S  = style("Cap",  fontName="Times-Italic", fontSize=7,
                leading=9.5, textColor=colors.HexColor("#444444"),
                alignment=TA_CENTER, spaceAfter=4)
-NOTE_S = style("Note", fontName="Helvetica-Oblique", fontSize=6.5,
+NOTE_S = style("Note", fontName="Times-Italic", fontSize=6.5,
                leading=9, textColor=colors.grey, alignment=TA_LEFT)
-REF_S  = style("Ref",  fontName="Helvetica", fontSize=6.5,
+REF_S  = style("Ref",  fontName="Times-Roman", fontSize=6.5,
                leading=9.5, textColor=colors.black, spaceAfter=2,
                leftIndent=8, firstLineIndent=-8)
 
@@ -853,6 +853,43 @@ def build():
     ]
     for r in refs:
         story.append(Paragraph(r, REF_S))
+
+    # ════════════════════════════════════════════════════════════════════
+    # APPENDIX
+    # ════════════════════════════════════════════════════════════════════
+    story.append(sec("A", "Appendix: β Sensitivity in Stage 3"))
+    story.append(make_table(
+        ["β", "Clean F1", "Medium F1"],
+        [
+            ["0.0 (distill only)", "2.5",  "2.9"],
+            ["0.5 (equal)",        "85.7", "78.0"],
+            ["1.0 (class only)",   "84.6", "74.2"],
+        ],
+        [COL_W*0.45, COL_W*0.275, COL_W*0.275],
+        "Effect of β on CoNLL-2003 F1.", "A1"
+    ))
+    story.append(para(
+        "β=0 (pure distillation) collapses to near-random F1 — the model learns "
+        "to mimic teacher representations but has no signal for label assignment. "
+        "β=1 (pure classification) performs well on clean text but lags at medium "
+        "noise. β=0.5 achieves the best balance and is used in all main experiments."))
+
+    story.append(sec("B", "Appendix: Training Convergence"))
+    story.append(make_table(
+        ["Stage", "Loss type", "Final loss"],
+        [
+            ["Stage 1 (BERT → RetBERT)",     "Cosine distance",  "0.0419"],
+            ["Stage 2 (RetBERT → LightRet)", "Cosine distance",  "0.1184"],
+            ["Stage 3 (NER fine-tuning)",    "Val cross-entropy","0.0504"],
+        ],
+        [COL_W*0.48, COL_W*0.30, COL_W*0.22],
+        "Training convergence across all three stages.", "A2"
+    ))
+    story.append(para(
+        "Stage 1 achieves cosine similarity of 0.958, confirming the character-level "
+        "student closely matches the subword teacher. Stage 2 loss of 0.1184 reflects "
+        "the inherent compression from 768-d to 256-d across 4 layers vs 12. "
+        "Stage 3 val CE of 0.0504 is consistent with the 85.7 clean F1 reported."))
 
     # ── Build ─────────────────────────────────────────────────────────
     doc.build(story)
