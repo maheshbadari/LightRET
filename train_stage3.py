@@ -20,6 +20,8 @@ Checkpoints:
     weights/lightret_stage3.pt  — LightRet backbone state dict
 """
 
+from __future__ import annotations
+
 import argparse
 import math
 import torch

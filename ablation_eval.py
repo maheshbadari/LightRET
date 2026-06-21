@@ -18,6 +18,8 @@ Expected checkpoints (produced by ablation_train.py):
     weights/abl_no_stage1.pt      + weights/abl_no_stage1_head.pt
 """
 
+from __future__ import annotations
+
 import argparse
 from pathlib import Path
 

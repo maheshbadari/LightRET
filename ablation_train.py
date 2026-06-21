@@ -18,9 +18,12 @@ Variants:
 Checkpoints saved to weights/abl_<variant>.pt  and  weights/abl_<variant>_head.pt
 """
 
+from __future__ import annotations
+
 import argparse
 import math
 from pathlib import Path
+from typing import Optional
 
 import torch
 import torch.nn as nn
@@ -93,7 +96,7 @@ def validate(student, head, loader, device):
 def train_stage3_variant(
     student: nn.Module,
     ner_head: nn.Module,
-    teacher: nn.Module | None,
+    teacher: Optional[nn.Module],
     train_ds: NERDataset,
     valid_ds: NERDataset,
     beta: float,

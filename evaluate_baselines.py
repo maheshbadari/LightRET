@@ -21,12 +21,13 @@ Requirements:
     pip install transformers seqeval
 """
 
+from __future__ import annotations
+
 import argparse
 import time
 from typing import Optional
 
 import torch
-import torch.nn as nn
 import numpy as np
 
 from src.noise import apply_noise
@@ -88,7 +89,7 @@ class BaselineNERModel:
     """
 
     def __init__(self, hf_id: str, device: torch.device):
-        from transformers import pipeline, AutoTokenizer, AutoModelForTokenClassification
+        from transformers import AutoTokenizer, AutoModelForTokenClassification
 
         print(f"  Loading {hf_id} ...")
         self.tokenizer = AutoTokenizer.from_pretrained(hf_id)
@@ -116,8 +117,6 @@ class BaselineNERModel:
         enc = {k: v.to(self.device) for k, v in enc.items()}
         logits = self.model(**enc).logits   # (1, T, C)
         pred_ids = logits[0].argmax(-1).cpu().tolist()
-        word_ids = enc["input_ids"].cpu()   # unused; use word_ids from encoding
-
         # Re-encode on CPU for word_ids
         enc_cpu = self.tokenizer(
             words,

@@ -13,6 +13,8 @@ Checkpoint saved to: weights/lightret_stage2_no_stage1.pt
 Then run: python ablation_train.py --variant no_stage1
 """
 
+from __future__ import annotations
+
 import math
 import torch
 import torch.nn as nn

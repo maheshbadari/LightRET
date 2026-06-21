@@ -9,6 +9,8 @@ Usage:
     python train_ner_head_only.py --epochs 3
 """
 
+from __future__ import annotations
+
 import argparse
 import torch
 import torch.nn as nn
